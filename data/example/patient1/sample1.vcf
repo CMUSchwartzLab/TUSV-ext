@@ -1,0 +1,21 @@
+##fileformat=VCFv4.2
+##filedate=20171002
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##FORMAT=<ID=GT,Number=1,Type=Integer,Description="Genotype">
+##FORMAT=<ID=CN,Number=2,Type=Integer,Description="Copy number genotype for imprecise events">
+##FORMAT=<ID=CNADJ,Number=.,Type=Integer,Description="Copy number of adjacency">
+##FORMAT=<ID=BDP,Number=1,Type=Integer,Description="Depth of split reads">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=INS,Description="Insertion of novel sequence">
+##ALT=<ID=CNV,Description="Copy number variable region">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	TUMOR	NORMAL
+1	20000001	sv0	.	]1:50000000]	.	PASS	MATEID=sv1;SVTYPE=BND	GT:CNADJ:BDP:DP	1|0:1:38:140	0|0:0:0:140
+1	50000000	sv1	.	[1:20000001[	.	PASS	MATEID=sv0;SVTYPE=BND	GT:CNADJ:BDP:DP	1|0:1:38:130	0|0:0:0:130
+1	1	cnv0	.	<CNV>	.	PASS	END=20000000;IMPRECISE	GT:CN	1|1:1,1	0|0:1,1
+1	20000001	cnv1	.	<CNV>	.	PASS	END=50000000;IMPRECISE	GT:CN	1|1:2,1	0|0:1,1
+1	50000001	cnv2	.	<CNV>	.	PASS	END=100000000;IMPRECISE	GT:CN	1|1:1,1	0|0:1,1
