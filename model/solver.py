@@ -90,7 +90,7 @@ def get_U(F, C, n):
 	for p in xrange(0, m):
 		for s in xrange(0, L):
 			f_hat = gp.quicksum([ U[p, k] * C[k, s] for k in xrange(0, N) ])
-			sums.append(_get_abs(mod, F[p, s] - f_hat))
+			sums.append(_get_abs_continuous(mod, F[p, s] - f_hat))
 	
 	mod.setObjective(gp.quicksum(sums), gp.GRB.MINIMIZE)
 	mod.optimize()
@@ -292,7 +292,7 @@ def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
 		for b in xrange(0, l):
 			sg_cpnum_est = gp.quicksum([ U[p, k] * Gam[k, b] for k in xrange(0, N) ])
 			bp_cpnum_est = gp.quicksum([ U[p, k] * C[k, b] for k in xrange(0, N) ])
-			mod.addConstr(S[p, b] == _get_abs(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
+			mod.addConstr(S[p, b] == _get_abs_continuous(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
 
 #
 #   OBJECTIVE
@@ -306,7 +306,7 @@ def _get_objective(mod, F, U, C, R, S, lamb1, lamb2): # returns expression for o
 	for p in xrange(0, m):
 		for s in xrange(0, L):
 			f_hat = gp.quicksum([ U[p, k] * C[k, s] for k in xrange(0, N) ])
-			sums.append(_get_abs(mod, F[p, s] - f_hat))
+			sums.append(_get_abs_continuous(mod, F[p, s] - f_hat))
 	for i in xrange(0, N):
 		for j in xrange(0, N):
 			sums.append(lamb1 * R[i, j])
@@ -592,6 +592,14 @@ def _get_abs(mod, x):
 	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, x)
 	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1*x)
 	return x_abs
+
+def _get_abs_continuous(mod, x):
+	x_abs = mod.addVar(vtype = gp.GRB.CONTINUOUS)
+	# mod.update() # <- removing this drastically speeds up solver
+	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, x)
+	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1*x)
+	return x_abs
+
 
 def _get_bin_rep(mod, X, vmax):
 	m, n = X.shape
