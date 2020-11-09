@@ -221,7 +221,7 @@ def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-				mod.addConstr(X[i, j, s] >= _get_abs(mod, C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j]))
+				mod.addConstr(X[i, j, s] >= _get_abs_continuous(mod, C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j]))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
 def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
@@ -238,7 +238,7 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
 				mod.addConstr(W[i, j, b] == 1 - X_bin[i, j, b])
 			for s in xrange(0, l):
 				for t in xrange(0, l): # breakpoint pairs appear on same edge
-					mod.addConstr(_get_abs(mod, W[i, j, s] - W[i, j, t]) <= 1 - G[s, t])
+					mod.addConstr(_get_abs_continuous(mod, W[i, j, s] - W[i, j, t]) <= 1 - G[s, t])
 	for b in xrange(0, l):     # breakpoints only appear once in the tree
 		mod.addConstr(gp.quicksum([ W[i, j, b] for i in xrange(0, N) for j in xrange(0, N) ]) == 1)
 
@@ -317,220 +317,6 @@ def _get_objective(mod, F, U, C, R, S, lamb1, lamb2): # returns expression for o
 	return gp.quicksum(sums)
 
 
-# # # # # # # # # # # # # # # # # # # # # # # #
-#   C O N S T R A I N T   F U N C T I O N S   #
-# # # # # # # # # # # # # # # # # # # # # # # #
-
-def _get_copy_num_constraints(C, c_max, l, r, n):
-	cst = [0 <= C, C <= c_max]
-
-	# copy number of breakpoints at root are all zero
-	for b in xrange(0, l):
-		cst.append(C[2*n-2, b] == 0)
-
-	# copy number of segments at root are all 2
-	for s in xrange(l, l+r):
-		cst.append(C[2*n-2, s] == 2)
-
-	return cst
-
-def _get_tree_constraints(E, n):
-	cst = [0 <= E, E <= 1]
-
-	# no outgoing edges for leaves
-	cst.append(E[:n, :] == 0)
-
-	# now only build constraints for internal nodes
-
-	# no edges from descendents to root
-	cst.append(E[n : 2*n-1, 2*n-2] == 0)
-
-	# no edges to self (only needed for non leaf, non root nodes b/c no constraints yet)
-	for i in xrange(n, 2*n-2):
-		cst.append(E[i, i] == 0)
-
-	# internal nodes have 2 outgoing edges
-	for i in xrange(n, 2*n-1):
-		cst.append(cvx.sum_entries(E[i, :]) == 2)
-
-	# only one edge from ancestors allowed (for every node but root)
-	for j in xrange(0, 2*n-2):
-		cst.append(cvx.sum_entries(E[n:, j]) == 1)
-
-	# no 2 node cycles
-	for i in xrange(n, 2*n-1):
-		for j in xrange(n, 2*n-1):
-			cst.append(E[i, j] + E[j, i] <= 1)
-
-	return cst
-
-def _get_cost_constraints(R, C, E, n, l, r, c_max):
-	N = 2*n-1
-	X = {}
-	for s in xrange(0, r): # x_i,j,s is absolute difference for seg s from node i to j if edge (i,j) exists
-		X[s] = cvx.Int(N, N)
-	
-	cst = []
-	for s, _ in X.iteritems():
-		cst.append(0 <= X[s])                 # all x_ijs must be >= 0
-		for i in xrange(0, N):
-			for j in xrange(0, N):
-				cst.append(X[s][i, j] <= c_max * E[i, j]) # x_ijs for all segments set to zero if edge (i, j) doesnt exist
-				cst.append(X[s][i, j] >= C[i, s+l] - C[j, s+l] - (c_max+1) * (1-E[i, j])) # abs val if edge exists
-				cst.append(X[s][i, j] >= C[j, s+l] - C[i, s+l] - (c_max+1) * (1-E[i, j]))
-
-	# define R as cost of transforming copy number profile (cnp) from node i to cnp fr j
-	for i in xrange(0, N):
-		for j in xrange(0, N):
-			cst.append(R[i, j] >= sum([ X[s][i, j] for s in xrange(0, r) ]))
-
-	return cst
-
-#  input: C_bin (cvx.Int) [2n-1, l+r] binary copy number c_k,s of mutation s in clone k. is 0 if cp# is 0. 1 otherwise
-#         W (dict of cvx.Int) key is bp_index (int). val is w_i,j (cvx.Int) bp appearance indicator variables
-#                             this should have no constraints yet
-#         E (cvx.Int) [2n-1, 2n-1] binary edge indicator. 1 if (i,j) is an edge. 0 otherwise
-#         G (np.array of int) g_s,t == 1 iff breakpoints s and t are mates. 0 otherwise
-#         n (int) number of leaves in tree. total number of nodes is 2n-1
-#         l (int) number of breakpoints
-# output: cst (list of cvx.Constraint) W_i,j,b == 1 iff bp b appears on edge (i,j). for each b, W_i,j,b == 1 once
-def _get_bp_appearance_constraints(C_bin, W, E, G, n, l):
-	N = 2*n-1
-
-	cst = []                # make each w_i,j,b binary
-	for b in xrange(0, l):
-		cst.append(0 <= W[b])
-		cst.append(W[b] <= 1)
-
-	X = {}                  # x_i,j,b == 0 iff binary cp# goes from 0 to 1 across edge (i,j). X_i,j,b > 0 otherwise
-	for b in xrange(0, l):
-		X[b] = cvx.Int(N, N)
-		for i in xrange(0, N):
-			for j in xrange(0, N):
-				cst.append(X[b][i, j] == 2 + C_bin[i, b] - C_bin[j, b] - E[i, j])
-
-	X_bin = {}              # x_bin_i,j,b == 0 iff binary cp# goes from 0 to 1 across edge (i,j). 1 otherwise
-	for b in xrange(0, l):
-		X_bin[b] = cvx.Int(N, N)
-		cst += _bin(X[b], X_bin[b], N, N, 3)   # largest x_i,j,b could be is 3
-
-		cst.append(W[b] == 1 - X_bin[b])       # w_i,j,b == 1 iff bp b appears on edge (i,j). 0 otherwise
-
-	for b in xrange(0, l):                   # breakpoints only appear once in the tree
-		cst.append(cvx.sum_entries(W[b]) == 1)
-
-	for s in xrange(0, l):                   # breakpoint pairs must appear on same edge
-		for t in xrange(0, l):
-			cst.append(W[s] - W[t] <= 1 - G[s, t])
-			cst.append(W[t] - W[s] <= 1 - G[s, t])
-	
-	return cst
-
-#  input: C_bin (cvx.Int) [2n-1, l+r] binary copy number c_k,s of mutation s in clone k. is 0 if cp# is 0. 1 otherwise
-#         W (dict of cvx.Int) key is bp_index (int). val is w_i,j (cvx.Int) == 1 iff bp b appears on edge (i,j)
-#         U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
-#         m (int) number of samples
-#         n (int) number of leaves in tree. total number of nodes is 2n-1
-#         l (int) number of breakpoints
-# output: cst (list of cvx.Constraint)
-#   does: demands breakpoints occuring higher in the tree have larger percent of cells with this bp must he larger
-def _get_sum_condition_constraints(C_bin, W, U, m, n, l):
-	N = 2*n-1
-	cst = []
-
-	W_node = {}              # w_node_j,b == 1 iff bp b appears at node j. 0 otherwise
-	for b in xrange(0, l):
-		W_node[b] = cvx.Int(N)
-		for j in xrange(0, N):
-			cst.append(W_node[b][j] == sum([ W[b][i, j] for i in xrange(0, N) ]))
-
-	Phi = cvx.Variable(m, l)          # phi_p,b is percent of cells in sample p with breakpoint b
-	cst.append(Phi == U * C_bin[:, :l])
-
-	Y = {}                        # y_i,j,s,t == 0 iff breakpoint s occurs at node i then t immediately occurs
-	for i in xrange(0, N):        #   at node j. > 0 otherwise
-		for j in xrange(0, N):
-			Y[(i, j)] = cvx.Int(l, l)
-			for s in xrange(0, l):
-				for t in xrange(0, l):
-					cst.append(Y[i, j][s, t] == 2 - W_node[s][i] - W[t][i, j])
-
-	Y_bin = {}                    # y_bin_i,j,s,t is binary version of y. so now any > 0 is 1
-	for i in xrange(0, N):
-		for j in xrange(0, N):
-			Y_bin[(i, j)] = cvx.Int(l, l)
-			cst += _bin(Y[(i, j)], Y_bin[(i, j)], l, l, 2)
-
-	D = cvx.Int(l, l)             # variant parent indicator d_s,t == 1 iff breakpoint s appears in parent
-	for s in xrange(0, l):        #   of node where breakpoint t appears
-		for t in xrange(0, l):
-			cst.append(D[s, t] == sum([ (1 - Y_bin[(i, j)][s, t]) for i in xrange(0, N) for j in xrange(0, N) ]))
-
-	for p in xrange(0, m):        # cell fraction of breakpoint in parent must be > cell frac in child
-		for s in xrange(0, l):
-			for t in xrange(0, l):
-				cst.append(Phi[p, s] >= Phi[p, t] - 1 + D[s, t])
-
-	return cst
-
-#  input: Gam (cvx.Int) [2n-1, l] copy number g_k,b if segment containing breakpoint b in clone k
-#                                 should have no constraints added so far!
-#         C (cvx.Int) [2n-1, l+r] copy number c_k,s of mutation s in clone k
-#         Q (np.array of 0 or 1) [l, r] q_b,s == 1 if breakpoint b is in segment s. 0 otherwise
-#         W (dict of cvx.Int) key is bp_index (int). val is w_i,j (cvx.Int) == 1 iff bp b appears on edge (i,j)
-# output: cst (list of cvx.Constraint)
-#   does: constrains Gamma (segment copy number) to be at least 1 when bp appears and always greater than bp cp num
-def _get_segment_copy_num_constraints(Gam, C, Q, W, m, n, l, r):
-	N = 2*n-1
-	cst = []
-
-	for k in xrange(0, N):
-		for b in xrange(0, l):
-			cst.append(Gam[k, b] == sum([ Q[b, s] * C[k, l+s] for s in xrange(0, r) ]))
-
-	cst.append(C[:, :l] <= Gam) # copy number of breakpoint cannot exceed copy number of segment containing bp
-
-	for b in xrange(0, l):   # copy number of segment containing bp must be at least 1 if bp appears at node j
-		for j in xrange(0, N):
-			cst.append(Gam[j, b] >= sum([ W[b][i, j] for i in xrange(0, N) ]))
-
-	return cst
-
-#  input: C (cvx.Int) [2n-1, l+r] copy number c_k,s of mutation s in clone k
-#         U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
-#         Q (np.array of 0 or 1) [l, r] q_b,s == 1 if breakpoint b is in segment s. 0 otherwise
-#         A (np.array of int) [m, l] a_p,b is number of mated reads for breakpoint b in sample p
-#         H (np.array of int) [m, l] h_p,b is number of total reads for breakpoint b in sample p
-#         m (int) number of samples
-#         n (int) number of leaves in tree. total number of nodes is 2n-1
-#         l (int) number of breakpoints
-#         r (int) number of copy number segments
-#         alpha (float) number of standard deviations allowed for estimator of breakpoint frequency
-# output: cst (list of cvx.Constraint)
-#   does: forces the ratio copy number of breakpoint to copy number of segment containing breakpoint
-#           (reguardless of whether it is mated or not) to be approximately the breakpoint frequency
-def _get_bp_frequency_constraints(C, U, Q, A, H, m, n, l, r, alpha):
-	N = 2*n-1
-	cst = []
-
-	Gam = cvx.Int(N, l)      # gam_k,b is segment copy number of bp b at clone k
-	for k in xrange(0, N):
-		for b in xrange(0, l):
-			cst.append(Gam[k, b] == sum([ Q[b, s] * C[k, l+s] for s in xrange(0, r) ]))
-
-	Pi = np.divide(A, H) # breakpoint frequency (bpf)
-	Std_pi = np.sqrt(np.divide(np.multiply(Pi, 1-Pi), H)) # standard deviation in bpf. assume binomial
-	
-	F_bp, F_sg = cvx.Variable(m, l), cvx.Variable(m, l)
-	cst.append(F_bp == U * Gam)      # f_bp_p,b is mixed copy number of breakpoint (with mate) b in sample p
-	cst.append(F_sg == U * C[:, :l]) # f_sg_p,b is mixed copy number of segment containing bp b in sample p
-
-	cst.append( cvx.mul_elemwise(Pi - alpha*Std_pi, F_bp) <= F_sg ) # ratio of f_bp / f_sg should be close
-	cst.append( cvx.mul_elemwise(Pi + alpha*Std_pi, F_bp) >= F_sg ) #   to bpf Pi
-
-	return cst
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # #
 #   G U R O B I   V A R I A B L E   M A K E R S   #
 # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -586,18 +372,10 @@ def _get_gp_3D_arr_bin_var(mod, l, m, n):
 	# mod.update()
 	return X
 
-def _get_abs(mod, x):
-	x_abs = mod.addVar(vtype = gp.GRB.INTEGER)
-	# mod.update() # <- removing this drastically speeds up solver
-	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, x)
-	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1*x)
-	return x_abs
-
 def _get_abs_continuous(mod, x):
 	x_abs = mod.addVar(vtype = gp.GRB.CONTINUOUS)
 	# mod.update() # <- removing this drastically speeds up solver
-	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, x)
-	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1*x)
+	mod.addConstr(x_abs == abs_(x))
 	return x_abs
 
 
