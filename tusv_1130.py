@@ -299,53 +299,53 @@ def write_xml(fname, E, C, l):
 #        A (np.array of int) [m, l] a_p,b is number of mated reads for breakpoint b in sample p
 #        H (np.array of int) [m, l] h_p,b is number of total reads for breakpoint b in sample p
 #  does: exits with error message if any of the input is not valid
-def check_valid_input(Q, G, A, H, F_full):
+def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 	print("check valid input")
-        l, r = np.shape(Q)
-        print(l,r)
+	l, r = np.shape(Q)
+	print(l,r)
 	m = np.shape(A)[0]
 	Q_msg = 'There is an issue with input binary matrix Q (indicates which segment each breakpoint belongs to). Each breakpoint must belong to exactly one segment.'
 	G_msg = 'There is an issue with input binary matrix G (indicates which breakpoints are mates). Each breakpoint must be mated into pairs.'
 	A_msg = 'There is an issue with input integer matricies A and H (indicating the number of reads mapped to each mated breakpoint and the number of total reads mapping to a breakpoint). The number of mated reads must be less or equal to the total reads and both should be non negative.'
-        print Q[np.where(np.sum(Q, axis=1) != 1)]
-        sys.stdout.flush()
-        size_upp = 3500
-        if l > size_upp:
-            idx = np.array(random.sample(list(range(l)), l - size_upp))
-            Q = np.delete(Q, idx, axis=0)
-	    G = np.delete(G, idx, axis=0)
-	    G = np.delete(G, idx, axis=1)
-	    F_full = np.delete(F_full, idx, axis=1)
-	    l, r = np.shape(Q)
+	print(Q[np.where(np.sum(Q, axis=1) != 1)])
+	sys.stdout.flush()
+	size_upp = 3500
+	if l > size_upp:
+		idx = np.array(random.sample(list(range(l)), l - size_upp))
+		Q = np.delete(Q, idx, axis=0)
+		G = np.delete(G, idx, axis=0)
+		G = np.delete(G, idx, axis=1)
+		F_full = np.delete(F_full, idx, axis=1)
+		l, r = np.shape(Q)
 	print(l, r)
-        size_low = 200
-        while Q.shape[0] > size_low:
-            idx = np.random.randint(np.shape(Q)[0])
-	    Q = np.delete(Q, idx, axis=0)
-            G = np.delete(G, idx, axis=0)
-            G = np.delete(G, idx, axis=1)
-            F_full = np.delete(F_full, idx, axis=1)
-            abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
-            F_full = np.delete(F_full, abnormal_idx2, axis=1)
-            Q = np.delete(Q, abnormal_idx2, axis=0)
-            G = np.delete(G, abnormal_idx2, axis=0)
-            G = np.delete(G, abnormal_idx2, axis=1)
-        l, r = np.shape(Q)
-        A = A[0:m, 0:l]
-        H = H[0:m, 0:l]
-        print(l,r)
-        raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
+	size_low = 200
+	while Q.shape[0] > size_low:
+		idx = np.random.randint(np.shape(Q)[0])
+		Q = np.delete(Q, idx, axis=0)
+		G = np.delete(G, idx, axis=0)
+		G = np.delete(G, idx, axis=1)
+		F_full = np.delete(F_full, idx, axis=1)
+		abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
+		F_full = np.delete(F_full, abnormal_idx2, axis=1)
+		Q = np.delete(Q, abnormal_idx2, axis=0)
+		G = np.delete(G, abnormal_idx2, axis=0)
+		G = np.delete(G, abnormal_idx2, axis=1)
+		l, r = np.shape(Q)
+		A = A[0:m, 0:l]
+		H = H[0:m, 0:l]
+		print(l,r)
+		raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
 
-	raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 0) == 2), G_msg)
+	raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
 	for i in xrange(0, l):
 		for j in xrange(0, l):
 			raiseif(G[i, j] != G[j, i], G_msg)
-			raiseif(i == j and G[i, i] != 1, G_msg)
+			raiseif(i == j and G[i, j] != 1, G_msg)
 
 	for p in xrange(0, m):
 		for b in xrange(0, l):
 			raiseif(A[p, b] < 0 or A[p, b] > H[p, b], A_msg)
-        return Q, G, A, H, F_full
+		return Q, G, A, H, F_full
 # raises exception if boolean is true
 def raiseif(should_raise, msg):
 	if should_raise:

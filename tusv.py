@@ -64,7 +64,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
 
 	F, Q, org_indxs = randomly_remove_segments(F_full, Q, num_seg_subsamples)
 
-	# replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
+	# replace lambda1 and lambda2 with input derived values if should_overide_lambdas was specified
 	if should_overide_lambdas:
 		m = len(F)
 		l, r = Q.shape
@@ -308,11 +308,11 @@ def check_valid_input(Q, G, A, H):
 
 	raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
 
-	raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 0) == 2), G_msg)
+	raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
 	for i in xrange(0, l):
 		for j in xrange(0, l):
 			raiseif(G[i, j] != G[j, i], G_msg)
-			raiseif(i == j and G[i, i] != 1, G_msg)
+			raiseif(i == j and G[i, j] != 1, G_msg)
 
 	for p in xrange(0, m):
 		for b in xrange(0, l):
