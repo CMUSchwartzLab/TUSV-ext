@@ -268,11 +268,11 @@ def get_sample_dict(reader):
             if rec.CHROM not in CN_sample_dict:
                 CN_sample_dict[rec.CHROM] = dict()
                 CN_sample_rec_dict[rec.CHROM] = dict()
-                        print(rec.CHROM, rec.INFO['END'])
-                        if isinstance(rec.INFO['END'], list):
-                            info_end = rec.INFO['END'][0]
-                        else:
-                            info_end = rec.INFO['END']
+                print(rec.CHROM, rec.INFO['END'])
+                if isinstance(rec.INFO['END'], list):
+                    info_end = rec.INFO['END'][0]
+                else:
+                    info_end = rec.INFO['END']
             CN_sample_dict[rec.CHROM][rec.POS] = ['s']
             CN_sample_dict[rec.CHROM][info_end] = ['e']
             CN_sample_rec_dict[rec.CHROM][(rec.POS, info_end)] = sum(rec.samples[0].data.CN)
