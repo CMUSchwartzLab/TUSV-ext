@@ -84,13 +84,15 @@ def get_U(F, C, n):
 	N = 2*n-1
 	mod = gp.Model('tusv')
 	U = _get_gp_arr_cnt_var(mod, m, N, 1.0)
+	temp_dif = _get_gp_arr_cnt_var(mod, m, L)
 	for i in xrange(0, m):
 		mod.addConstr(gp.quicksum(U[i, :]) == 1.0)
 	sums = []
 	for p in xrange(0, m):
 		for s in xrange(0, L):
 			f_hat = gp.quicksum([ U[p, k] * C[k, s] for k in xrange(0, N) ])
-			sums.append(_get_abs_continuous(mod, F[p, s] - f_hat))
+			mod.addConstr(temp_dif[p, s] == F[p, s] - f_hat)
+			sums.append(_get_abs_continuous(mod, temp_dif[p, s]))
 	
 	mod.setObjective(gp.quicksum(sums), gp.GRB.MINIMIZE)
 	mod.optimize()
@@ -217,11 +219,13 @@ def _set_ancestry_constraints(mod, A, E, N):
 def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 	N = 2*n-1
 	X = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
+	temp_dif = _get_gp_3D_arr_int_var(mod, N, N, r)
 	for i in xrange(0, N):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-				mod.addConstr(X[i, j, s] >= _get_abs_continuous(mod, C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j]))
+				mod.addConstr(temp_dif[i, j, s] == C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j])
+				mod.addConstr(X[i, j, s] >= _get_abs_continuous(mod, temp_dif[i, j, s]))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
 def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
@@ -232,13 +236,16 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
 			for b in xrange(0, l): # only 0 if copy num goes from 0 to 1 across edge (i,j)
 				mod.addConstr(X[i, j, b] == 2 + C_bin[i, b] - C_bin[j, b] - E[i, j])
 	X_bin = _get_3D_bin_rep(mod, X, 3)
+	temp_dif = {}
 	for i in xrange(0, N):
 		for j in xrange(0, N):
 			for b in xrange(0, l): # set W as bp appearance
 				mod.addConstr(W[i, j, b] == 1 - X_bin[i, j, b])
+			temp_dif[(i, j)] = _get_gp_arr_int_var(mod, l, l, vmax = 1)
 			for s in xrange(0, l):
 				for t in xrange(0, l): # breakpoint pairs appear on same edge
-					mod.addConstr(_get_abs_continuous(mod, W[i, j, s] - W[i, j, t]) <= 1 - G[s, t])
+					mod.addConstr(temp_dif[(i, j)] == W[i, j, s] - W[i, j, t])
+					mod.addConstr(_get_abs_continuous(mod, temp_dif[(i, j)]) <= 1 - G[s, t])
 	for b in xrange(0, l):     # breakpoints only appear once in the tree
 		mod.addConstr(gp.quicksum([ W[i, j, b] for i in xrange(0, N) for j in xrange(0, N) ]) == 1)
 
@@ -288,11 +295,13 @@ def _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r):
 def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
 	m, l = S.shape
 	N, _ = Gam.shape
+	temp_dif = _get_gp_arr_cnt_var(mod, m, l)
 	for p in xrange(0, m):
 		for b in xrange(0, l):
 			sg_cpnum_est = gp.quicksum([ U[p, k] * Gam[k, b] for k in xrange(0, N) ])
 			bp_cpnum_est = gp.quicksum([ U[p, k] * C[k, b] for k in xrange(0, N) ])
-			mod.addConstr(S[p, b] == _get_abs_continuous(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
+			mod.addConstr(temp_dif[p, b] ==  Pi[p, b] * sg_cpnum_est - bp_cpnum_est)
+			mod.addConstr(S[p, b] == _get_abs_continuous(mod, temp_dif[p, b]))
 
 #
 #   OBJECTIVE
@@ -303,10 +312,12 @@ def _get_objective(mod, F, U, C, R, S, lamb1, lamb2): # returns expression for o
 	N, _ = C.shape
 	_, l = S.shape
 	sums = []
+	temp_dif = _get_gp_arr_cnt_var(mod, m, L)
 	for p in xrange(0, m):
 		for s in xrange(0, L):
 			f_hat = gp.quicksum([ U[p, k] * C[k, s] for k in xrange(0, N) ])
-			sums.append(_get_abs_continuous(mod, F[p, s] - f_hat))
+			mod.addConstr(temp_dif[p, s] == F[p, s] - f_hat)
+			sums.append(_get_abs_continuous(mod, temp_dif[p, s]))
 	for i in xrange(0, N):
 		for j in xrange(0, N):
 			sums.append(lamb1 * R[i, j])
@@ -340,7 +351,7 @@ def _get_gp_arr_bin_var(mod, m, n):
 	# mod.update()
 	return X
 
-def _get_gp_arr_cnt_var(mod, m, n, vmax = None):
+def _get_gp_arr_cnt_var(mod, m, n, vmax=None):
 	X = np.empty((m, n), dtype = gp.Var)
 	for i in xrange(0, m):
 		for j in xrange(0, n):
@@ -351,7 +362,7 @@ def _get_gp_arr_cnt_var(mod, m, n, vmax = None):
 	# mod.update()
 	return X
 
-def _get_gp_3D_arr_int_var(mod, l, m, n, vmax):
+def _get_gp_3D_arr_int_var(mod, l, m, n, vmax=None):
 	X = np.empty((l, m, n), dtype = gp.Var)
 	for i in xrange(0, l):
 		for j in xrange(0, m):
