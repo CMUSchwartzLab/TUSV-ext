@@ -375,7 +375,7 @@ def _get_gp_3D_arr_bin_var(mod, l, m, n):
 def _get_abs_continuous(mod, x):
 	x_abs = mod.addVar(vtype = gp.GRB.CONTINUOUS)
 	# mod.update() # <- removing this drastically speeds up solver
-	mod.addConstr(x_abs == abs_(x), name="absConstr")
+	mod.addConstr(x_abs == gp.abs_(x), name="absConstr")
 	return x_abs
 
 
