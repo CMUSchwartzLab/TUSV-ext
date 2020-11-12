@@ -225,7 +225,7 @@ def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
 				mod.addConstr(temp_dif[i, j, s] == float(C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j]))
-				mod.addConstr(X[i, j, s] >= _get_abs_continuous(mod, temp_dif[i, j, s]))
+				mod.addConstr(X[i, j, s] >= _get_abs_int(mod, temp_dif[i, j, s]))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
 def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
@@ -245,7 +245,7 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
 			for s in xrange(0, l):
 				for t in xrange(0, l): # breakpoint pairs appear on same edge
 					mod.addConstr(temp_dif[(i, j)] == W[i, j, s] - W[i, j, t])
-					mod.addConstr(_get_abs_continuous(mod, temp_dif[(i, j)]) <= 1 - G[s, t])
+					mod.addConstr(_get_abs_int(mod, temp_dif[(i, j)]) <= 1 - G[s, t])
 	for b in xrange(0, l):     # breakpoints only appear once in the tree
 		mod.addConstr(gp.quicksum([ W[i, j, b] for i in xrange(0, N) for j in xrange(0, N) ]) == 1)
 
@@ -409,6 +409,12 @@ def _get_gp_3D_arr_cnt_var(mod, l, m, n, vmin=None, vmax=None):
 
 def _get_abs_continuous(mod, x):
 	x_abs = mod.addVar(vtype = gp.GRB.CONTINUOUS)
+	# mod.update() # <- removing this drastically speeds up solver
+	mod.addConstr(x_abs == gp.abs_(x), name="absConstr")
+	return x_abs
+
+def _get_abs_int(mod, x):
+	x_abs = mod.addVar(vtype = gp.GRB.INTEGER)
 	# mod.update() # <- removing this drastically speeds up solver
 	mod.addConstr(x_abs == gp.abs_(x), name="absConstr")
 	return x_abs
