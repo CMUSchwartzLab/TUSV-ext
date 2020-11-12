@@ -224,7 +224,7 @@ def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-				mod.addConstr(temp_dif[i, j, s] == C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j])
+				mod.addConstr(temp_dif[i, j, s] == C[i, s+l] - C[j, s+l] - (c_max+1) * (1-E[i, j]))
 				mod.addConstr(X[i, j, s] >= _get_abs_int(mod, temp_dif[i, j, s]))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
