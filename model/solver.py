@@ -135,14 +135,14 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit = None):
 
 	mod = gp.Model('tusv')
 
-	C = _get_gp_arr_int_var(mod, N, l + r, c_max)
+	C = _get_gp_arr_int_var(mod, N, l + r, vmax=c_max)
 	E = _get_gp_arr_bin_var(mod, N, N)
 	A = _get_gp_arr_bin_var(mod, N, N)            # ancestry matrix
-	R = _get_gp_arr_int_var(mod, N, N, c_max * r) # rho. cost across each edge
+	R = _get_gp_arr_int_var(mod, N, N, vmax=c_max * r) # rho. cost across each edge
 	S = _get_gp_arr_cnt_var(mod, m, l, 0, c_max)     # ess. bpf penalty for each bp in each sample
 	W = _get_gp_3D_arr_bin_var(mod, N, N, l)
 	C_bin = _get_bin_rep(mod, C, c_max)
-	Gam = _get_gp_arr_int_var(mod, N, l, c_max)
+	Gam = _get_gp_arr_int_var(mod, N, l, vmax=c_max)
 
 	F_seg = F[:, l:].dot(np.transpose(Q)) # [m, l] mixed copy number of segment containing breakpoint
 	Pi = np_divide_0(F[:, :l], F_seg)     # [m, l] expected bpf (ratio of bp copy num to segment copy num)
@@ -218,19 +218,19 @@ def _set_ancestry_constraints(mod, A, E, N):
 
 def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 	N = 2*n-1
-	X = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
-	temp_dif = _get_gp_3D_arr_cnt_var(mod, N, N, None, r)
+	X = _get_gp_3D_arr_int_var(mod, N, N, r, vmax=c_max)
+	temp_dif = _get_gp_3D_arr_int_var(mod, N, N, r, vmin=-2*c_max, vmax=2*c_max)
 	for i in xrange(0, N):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-				mod.addConstr(temp_dif[i, j, s] == float(C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j]))
+				mod.addConstr(temp_dif[i, j, s] == C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j])
 				mod.addConstr(X[i, j, s] >= _get_abs_int(mod, temp_dif[i, j, s]))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
 def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
 	N = 2*n-1
-	X = _get_gp_3D_arr_int_var(mod, N, N, l, 3)
+	X = _get_gp_3D_arr_int_var(mod, N, N, l, vmax=3)
 	for i in xrange(0, N):
 		for j in xrange(0, N):
 			for b in xrange(0, l): # only 0 if copy num goes from 0 to 1 across edge (i,j)
@@ -332,14 +332,14 @@ def _get_objective(mod, F, U, C, R, S, lamb1, lamb2): # returns expression for o
 #   G U R O B I   V A R I A B L E   M A K E R S   #
 # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-def _get_gp_arr_int_var(mod, m, n, vmax = None):
+def _get_gp_arr_int_var(mod, m, n, vmin=0, vmax = None):
 	X = np.empty((m, n), dtype = gp.Var)
 	for i in xrange(0, m):
 		for j in xrange(0, n):
 			if vmax is None:
-				X[i, j] = mod.addVar(lb = 0, vtype = gp.GRB.INTEGER)
+				X[i, j] = mod.addVar(lb = vmin, vtype = gp.GRB.INTEGER)
 			else:
-				X[i, j] = mod.addVar(lb = 0, ub = vmax, vtype = gp.GRB.INTEGER)
+				X[i, j] = mod.addVar(lb = vmin, ub = vmax, vtype = gp.GRB.INTEGER)
 	# mod.update()
 	return X
 
@@ -368,15 +368,15 @@ def _get_gp_arr_cnt_var(mod, m, n, vmin=None, vmax=None):
 	# mod.update()
 	return X
 
-def _get_gp_3D_arr_int_var(mod, l, m, n, vmax=None):
+def _get_gp_3D_arr_int_var(mod, l, m, n, vmin=0, vmax=None):
 	X = np.empty((l, m, n), dtype = gp.Var)
 	for i in xrange(0, l):
 		for j in xrange(0, m):
 			for k in xrange(0, n):
 				if vmax is None:
-					X[i, j, k] = mod.addVar(lb = 0, vtype = gp.GRB.INTEGER)
+					X[i, j, k] = mod.addVar(lb = vmin, vtype = gp.GRB.INTEGER)
 				else:
-					X[i, j, k] = mod.addVar(lb = 0, ub = vmax, vtype = gp.GRB.INTEGER)
+					X[i, j, k] = mod.addVar(lb = vmin, ub = vmax, vtype = gp.GRB.INTEGER)
 	# mod.update()
 	return X
 
