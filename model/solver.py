@@ -219,12 +219,12 @@ def _set_ancestry_constraints(mod, A, E, N):
 def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 	N = 2*n-1
 	X = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
-	temp_dif = _get_gp_3D_arr_cnt_var(mod, N, N, r)
+	temp_dif = _get_gp_3D_arr_cnt_var(mod, N, N, None, r)
 	for i in xrange(0, N):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-				mod.addConstr(temp_dif[i, j, s] == C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j])
+				mod.addConstr(temp_dif[i, j, s] == float(C[i, s+l] - C[j, s+l]) - (c_max+1) * (1-E[i, j]))
 				mod.addConstr(X[i, j, s] >= _get_abs_continuous(mod, temp_dif[i, j, s]))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
