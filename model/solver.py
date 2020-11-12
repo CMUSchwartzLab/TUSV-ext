@@ -83,7 +83,7 @@ def get_U(F, C, n):
 	m, L = F.shape
 	N = 2*n-1
 	mod = gp.Model('tusv')
-	U = _get_gp_arr_cnt_var(mod, m, N, 1.0)
+	U = _get_gp_arr_cnt_var(mod, m, N, 0, 1.0)
 	temp_dif = _get_gp_arr_cnt_var(mod, m, L)
 	for i in xrange(0, m):
 		mod.addConstr(gp.quicksum(U[i, :]) == 1.0)
@@ -139,7 +139,7 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit = None):
 	E = _get_gp_arr_bin_var(mod, N, N)
 	A = _get_gp_arr_bin_var(mod, N, N)            # ancestry matrix
 	R = _get_gp_arr_int_var(mod, N, N, c_max * r) # rho. cost across each edge
-	S = _get_gp_arr_cnt_var(mod, m, l, c_max)     # ess. bpf penalty for each bp in each sample
+	S = _get_gp_arr_cnt_var(mod, m, l, 0, c_max)     # ess. bpf penalty for each bp in each sample
 	W = _get_gp_3D_arr_bin_var(mod, N, N, l)
 	C_bin = _get_bin_rep(mod, C, c_max)
 	Gam = _get_gp_arr_int_var(mod, N, l, c_max)
@@ -219,7 +219,7 @@ def _set_ancestry_constraints(mod, A, E, N):
 def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 	N = 2*n-1
 	X = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
-	temp_dif = _get_gp_3D_arr_int_var(mod, N, N, r)
+	temp_dif = _get_gp_3D_arr_cnt_var(mod, N, N, r)
 	for i in xrange(0, N):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
@@ -261,7 +261,7 @@ def _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l):
 				mod.addConstr(X[i, j, b] >= A[i, j] + C_bin[j, b] - 1) # X[i, j, b] == A[i, j] && C_bin[j, b]
 				mod.addConstr(X[i, j, b] <= A[i, j])
 				mod.addConstr(X[i, j, b] <= C_bin[j, b])
-	Y = _get_gp_arr_cnt_var(mod, N, l, vmax = N)
+	Y = _get_gp_arr_cnt_var(mod, N, l, 0, vmax = N)
 	for i in xrange(0, N):
 		for b in xrange(0, l):
 			mod.addConstr(Y[i, b] == gp.quicksum(A[i, :]) - gp.quicksum(X[i, :, b]))
@@ -274,7 +274,7 @@ def _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l):
 			for s in xrange(0, l):                                 # to bp t appearing in descendant v_j
 				for t in xrange(0, l):
 					mod.addConstr(Z[(i, j)][s, t] == 3 - W_node[i, s] - W_node[j, t] - A[i, j] + Y_bin[i, s])
-	Phi = _get_gp_arr_cnt_var(mod, m, l)
+	Phi = _get_gp_arr_cnt_var(mod, m, l, vmin=0)
 	for p in xrange(0, m):
 		for b in xrange(0, l): # Phi[p,s] >= Phi[p,t] constraint only if t appears in ancestor of s and s is never lost
 			mod.addConstr(Phi[p, b] == gp.quicksum([ U[p, k] * C_bin[k, b] for k in xrange(0, N) ]))
@@ -336,7 +336,7 @@ def _get_gp_arr_int_var(mod, m, n, vmax = None):
 	X = np.empty((m, n), dtype = gp.Var)
 	for i in xrange(0, m):
 		for j in xrange(0, n):
-			if vmax == None:
+			if vmax is None:
 				X[i, j] = mod.addVar(lb = 0, vtype = gp.GRB.INTEGER)
 			else:
 				X[i, j] = mod.addVar(lb = 0, ub = vmax, vtype = gp.GRB.INTEGER)
@@ -351,14 +351,20 @@ def _get_gp_arr_bin_var(mod, m, n):
 	# mod.update()
 	return X
 
-def _get_gp_arr_cnt_var(mod, m, n, vmax=None):
+def _get_gp_arr_cnt_var(mod, m, n, vmin=None, vmax=None):
 	X = np.empty((m, n), dtype = gp.Var)
 	for i in xrange(0, m):
 		for j in xrange(0, n):
-			if vmax == None:
-				X[i, j] = mod.addVar(lb = 0, vtype = gp.GRB.CONTINUOUS)
+			if vmax is None:
+				if vmin is None:
+					X[i, j] = mod.addVar(vtype=gp.GRB.CONTINUOUS)
+				else:
+					X[i, j] = mod.addVar(lb=vmin, vtype=gp.GRB.CONTINUOUS)
 			else:
-				X[i, j] = mod.addVar(lb = 0, ub = vmax, vtype = gp.GRB.CONTINUOUS)
+				if vmin is None:
+					X[i, j] = mod.addVar(ub=vmax, vtype=gp.GRB.CONTINUOUS)
+				else:
+					X[i, j] = mod.addVar(lb=vmin, ub=vmax, vtype=gp.GRB.CONTINUOUS)
 	# mod.update()
 	return X
 
@@ -367,7 +373,7 @@ def _get_gp_3D_arr_int_var(mod, l, m, n, vmax=None):
 	for i in xrange(0, l):
 		for j in xrange(0, m):
 			for k in xrange(0, n):
-				if vmax == None:
+				if vmax is None:
 					X[i, j, k] = mod.addVar(lb = 0, vtype = gp.GRB.INTEGER)
 				else:
 					X[i, j, k] = mod.addVar(lb = 0, ub = vmax, vtype = gp.GRB.INTEGER)
@@ -380,6 +386,24 @@ def _get_gp_3D_arr_bin_var(mod, l, m, n):
 		for j in xrange(0, m):
 			for k in xrange(0, n):
 				X[i, j, k] = mod.addVar(vtype = gp.GRB.BINARY)
+	# mod.update()
+	return X
+
+def _get_gp_3D_arr_cnt_var(mod, l, m, n, vmin=None, vmax=None):
+	X = np.empty((l, m, n), dtype = gp.Var)
+	for i in xrange(0, l):
+		for j in xrange(0, m):
+			for k in xrange(0, n):
+				if vmax is None:
+					if vmin is None:
+						X[i, j, k] = mod.addVar(vtype = gp.GRB.CONTINUOUS)
+					else:
+						X[i, j, k] = mod.addVar(lb=vmin, vtype=gp.GRB.CONTINUOUS)
+				else:
+					if vmin is None:
+						X[i, j, k] = mod.addVar(ub=vmax, vtype = gp.GRB.CONTINUOUS)
+					else:
+						X[i, j, k] = mod.addVar(lb=vmin, ub=vmax, vtype=gp.GRB.CONTINUOUS)
 	# mod.update()
 	return X
 
