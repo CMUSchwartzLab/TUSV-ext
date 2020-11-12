@@ -244,8 +244,8 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
 			temp_dif[(i, j)] = _get_gp_arr_int_var(mod, l, l, vmax = 1)
 			for s in xrange(0, l):
 				for t in xrange(0, l): # breakpoint pairs appear on same edge
-					mod.addConstr(temp_dif[(i, j)] == W[i, j, s] - W[i, j, t])
-					mod.addConstr(_get_abs_int(mod, temp_dif[(i, j)]) <= 1 - G[s, t])
+					mod.addConstr(temp_dif[(i, j)][s, t] == W[i, j, s] - W[i, j, t])
+					mod.addConstr(_get_abs_int(mod, temp_dif[(i, j)][s, t]) <= 1 - G[s, t])
 	for b in xrange(0, l):     # breakpoints only appear once in the tree
 		mod.addConstr(gp.quicksum([ W[i, j, b] for i in xrange(0, N) for j in xrange(0, N) ]) == 1)
 
