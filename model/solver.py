@@ -410,13 +410,13 @@ def _get_gp_3D_arr_cnt_var(mod, l, m, n, vmin=None, vmax=None):
 def _get_abs_continuous(mod, x):
 	x_abs = mod.addVar(vtype = gp.GRB.CONTINUOUS)
 	# mod.update() # <- removing this drastically speeds up solver
-	mod.addConstr(x_abs == gp.abs_(x), name="absConstr")
+	mod.addConstr(x_abs == gp.abs_(x), name="abscntConstr")
 	return x_abs
 
 def _get_abs_int(mod, x):
 	x_abs = mod.addVar(vtype = gp.GRB.INTEGER)
 	# mod.update() # <- removing this drastically speeds up solver
-	mod.addConstr(x_abs == gp.abs_(x), name="absConstr")
+	mod.addConstr(x_abs == gp.abs_(x), name="absintConstr")
 	return x_abs
 
 
