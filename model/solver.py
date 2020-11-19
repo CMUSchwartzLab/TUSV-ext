@@ -74,6 +74,9 @@ def get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit = None)
 
 	return U, C, E, R, W, obj_val, None
 
+def check_IIS(mod):
+	mod.computeIIS()
+	mod.write("model.ilp")
 
 #  input: F (np.array of float) [m, l+r] mixed copy number f_p,s of mutation s in sample p
 #         C (np.array of int) [2n-1, l+r] int copy number c_k,s of mutation s in clone k
@@ -84,17 +87,17 @@ def get_U(F, C, n):
 	N = 2*n-1
 	mod = gp.Model('tusv')
 	U = _get_gp_arr_cnt_var(mod, m, N, 0, 1.0)
-	temp_dif = _get_gp_arr_cnt_var(mod, m, L)
+	#temp_dif = _get_gp_arr_cnt_var(mod, m, L)
 	for i in xrange(0, m):
 		mod.addConstr(gp.quicksum(U[i, :]) == 1.0)
 	sums = []
 	for p in xrange(0, m):
 		for s in xrange(0, L):
 			f_hat = gp.quicksum([ U[p, k] * C[k, s] for k in xrange(0, N) ])
-			mod.addConstr(temp_dif[p, s] == F[p, s] - f_hat)
-			sums.append(_get_abs_continuous(mod, temp_dif[p, s]))
-	
+			sums.append(_get_abs_greater(mod, F[p, s] - f_hat))
+
 	mod.setObjective(gp.quicksum(sums), gp.GRB.MINIMIZE)
+	check_IIS(mod)
 	mod.optimize()
 	U = _as_solved(U)
 
@@ -152,12 +155,12 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit = None):
 	_set_ancestry_constraints(mod, A, E, N)
 	_set_cost_constraints(mod, R, C, E, n, l, r, c_max)
 	_set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l)
-	_set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
+	#_set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
 	_set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r)
 	_set_bpf_penalty(mod, S, Pi, U, C, Gam)
 
 	mod.setObjective(_get_objective(mod, F, U, C, R, S, lamb1, lamb2), gp.GRB.MINIMIZE)
-
+	check_IIS(mod)
 	mod.params.MIPFocus = 1
 	if time_limit != None:
 		mod.params.TimeLimit = time_limit
@@ -219,13 +222,12 @@ def _set_ancestry_constraints(mod, A, E, N):
 def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
 	N = 2*n-1
 	X = _get_gp_3D_arr_int_var(mod, N, N, r, vmax=c_max)
-	temp_dif = _get_gp_3D_arr_int_var(mod, N, N, r, vmin=-2*c_max, vmax=2*c_max)
 	for i in xrange(0, N):
 		for j in xrange(0, N):                           # no cost if no edge exists
 			for s in xrange(0, r):                         # cost is difference between copy number
 				mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-				mod.addConstr(temp_dif[i, j, s] == C[i, s+l] - C[j, s+l] - (c_max+1) * (1-E[i, j]))
-				mod.addConstr(X[i, j, s] >= _get_abs_int(mod, temp_dif[i, j, s]))
+				mod.addConstr(X[i, j, s] >= C[i, s+l] - C[j, s+l] - (c_max+1) * (1-E[i, j]))
+				mod.addConstr(X[i, j, s] >= -1 * (C[i, s + l] - C[j, s + l] - (c_max + 1) * (1 - E[i, j])))
 			mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
 def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
@@ -236,16 +238,14 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
 			for b in xrange(0, l): # only 0 if copy num goes from 0 to 1 across edge (i,j)
 				mod.addConstr(X[i, j, b] == 2 + C_bin[i, b] - C_bin[j, b] - E[i, j])
 	X_bin = _get_3D_bin_rep(mod, X, 3)
-	temp_dif = {}
 	for i in xrange(0, N):
 		for j in xrange(0, N):
 			for b in xrange(0, l): # set W as bp appearance
 				mod.addConstr(W[i, j, b] == 1 - X_bin[i, j, b])
-			temp_dif[(i, j)] = _get_gp_arr_int_var(mod, l, l, vmax = 1)
 			for s in xrange(0, l):
 				for t in xrange(0, l): # breakpoint pairs appear on same edge
-					mod.addConstr(temp_dif[(i, j)][s, t] == W[i, j, s] - W[i, j, t])
-					mod.addConstr(_get_abs_int(mod, temp_dif[(i, j)][s, t]) <= 1 - G[s, t])
+					mod.addConstr(W[i, j, s] - W[i, j, t] >= -1 + G[s, t])
+					mod.addConstr(W[i, j, s] - W[i, j, t] <= 1 - G[s, t])
 	for b in xrange(0, l):     # breakpoints only appear once in the tree
 		mod.addConstr(gp.quicksum([ W[i, j, b] for i in xrange(0, N) for j in xrange(0, N) ]) == 1)
 
@@ -295,13 +295,13 @@ def _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r):
 def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
 	m, l = S.shape
 	N, _ = Gam.shape
-	temp_dif = _get_gp_arr_cnt_var(mod, m, l)
+	#temp_dif = _get_gp_arr_cnt_var(mod, m, l)
 	for p in xrange(0, m):
 		for b in xrange(0, l):
 			sg_cpnum_est = gp.quicksum([ U[p, k] * Gam[k, b] for k in xrange(0, N) ])
 			bp_cpnum_est = gp.quicksum([ U[p, k] * C[k, b] for k in xrange(0, N) ])
-			mod.addConstr(temp_dif[p, b] ==  Pi[p, b] * sg_cpnum_est - bp_cpnum_est)
-			mod.addConstr(S[p, b] == _get_abs_continuous(mod, temp_dif[p, b]))
+			#mod.addConstr(temp_dif[p, b] ==  Pi[p, b] * sg_cpnum_est - bp_cpnum_est)
+			mod.addConstr(S[p, b] == _get_abs_greater(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))#temp_dif[p, b]))
 
 #
 #   OBJECTIVE
@@ -312,12 +312,12 @@ def _get_objective(mod, F, U, C, R, S, lamb1, lamb2): # returns expression for o
 	N, _ = C.shape
 	_, l = S.shape
 	sums = []
-	temp_dif = _get_gp_arr_cnt_var(mod, m, L)
+	#temp_dif = _get_gp_arr_cnt_var(mod, m, L)
 	for p in xrange(0, m):
 		for s in xrange(0, L):
 			f_hat = gp.quicksum([ U[p, k] * C[k, s] for k in xrange(0, N) ])
-			mod.addConstr(temp_dif[p, s] == F[p, s] - f_hat)
-			sums.append(_get_abs_continuous(mod, temp_dif[p, s]))
+			#mod.addConstr(temp_dif[p, s] == F[p, s] - f_hat)
+			sums.append(_get_abs_greater(mod, F[p, s] - f_hat))#temp_dif[p, s]))
 	for i in xrange(0, N):
 		for j in xrange(0, N):
 			sums.append(lamb1 * R[i, j])
@@ -419,6 +419,12 @@ def _get_abs_int(mod, x):
 	mod.addConstr(x_abs == gp.abs_(x), name="absintConstr")
 	return x_abs
 
+def _get_abs_greater(mod, x):
+	x_abs = mod.addVar(vtype = gp.GRB.CONTINUOUS) ### xf: why should it be an integer as an result from abs operation?
+	# mod.update() # <- removing this drastically speeds up solver
+	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, x)
+	mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1*x)
+	return x_abs
 
 def _get_bin_rep(mod, X, vmax):
 	m, n = X.shape

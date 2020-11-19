@@ -60,6 +60,7 @@ def main(argv):
 def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, num_processors, time_limit, metadata_fname, num_seg_subsamples, should_overide_lambdas):
         print("unmix")
 	F_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
+	print(F_full,Q,G)
 	Q, G, A, H, F_full = check_valid_input(Q, G, A, H, F_full)
 
 	F, Q, org_indxs = randomly_remove_segments(F_full, Q, num_seg_subsamples)
@@ -119,6 +120,7 @@ def _arg_val_to_str(v):
 #         Q (np.array) [l, r']
 #         org_indices (list of int) for each segment in output, the index of where it is found in input F
 def randomly_remove_segments(F, Q, num_seg_subsamples):
+	print(Q)
 	if num_seg_subsamples is None:
 		return F, Q, None
 	l, r = Q.shape
@@ -335,7 +337,14 @@ def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 		H = H[0:m, 0:l]
 		print(l,r)
 		raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
-
+	abnormal_idx3 = np.where(np.sum(G, 0) != 2)[0]
+	print(abnormal_idx3)
+	G = np.delete(G, abnormal_idx3, axis=0)
+	G = np.delete(G, abnormal_idx3, axis=1)
+	F_full = np.delete(F_full, abnormal_idx3, axis=1)
+	Q = np.delete(Q, abnormal_idx3, axis=0)
+	l, r = np.shape(Q)
+	print(G)
 	raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
 	for i in xrange(0, l):
 		for j in xrange(0, l):
