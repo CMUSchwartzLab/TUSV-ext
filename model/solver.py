@@ -150,7 +150,7 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     _set_ancestry_constraints(mod, A, E, N)
     _set_cost_constraints(mod, R, C, E, n, l, r, c_max)
     _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l)
-    _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
+    #_set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
     _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r)
     _set_bpf_penalty(mod, S, Pi, U, C, Gam)
 
