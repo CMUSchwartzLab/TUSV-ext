@@ -224,7 +224,8 @@ def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
         for j in xrange(0, N):  # no cost if no edge exists
             for s in xrange(0, r):  # cost is difference between copy number
                 mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-                mod.addConstr(X[i, j, s] >= _get_abs(mod, C[i, s + l] - C[j, s + l]) - (c_max + 1) * (1 - E[i, j]))
+                mod.addConstr(X[i, j, s] >= C[i, s + l] - C[j, s + l] - (c_max + 1) * (1 - E[i, j]))
+                mod.addConstr(X[i, j, s] >= -1 * (C[i, s + l] - C[j, s + l]) - (c_max + 1) * (1 - E[i, j]))
             mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
 
 
@@ -242,7 +243,8 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
                 mod.addConstr(W[i, j, b] == 1 - X_bin[i, j, b])
             for s in xrange(0, l):
                 for t in xrange(0, l):  # breakpoint pairs appear on same edge
-                    mod.addConstr(_get_abs(mod, W[i, j, s] - W[i, j, t]) <= 1 - G[s, t])
+                    mod.addConstr(W[i, j, s] - W[i, j, t] <= 1 - G[s, t])
+                    mod.addConstr(W[i, j, s] - W[i, j, t] >= - 1 + G[s, t])
     for b in xrange(0, l):  # breakpoints only appear once in the tree
         mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
 
