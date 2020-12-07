@@ -320,7 +320,7 @@ def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 		F_full = np.delete(F_full, idx, axis=1)
 		l, r = np.shape(Q)
 	print(l, r)
-	size_low = 200
+	size_low = 1000
 	while Q.shape[0] > size_low:
 		idx = np.random.randint(np.shape(Q)[0])
 		Q = np.delete(Q, idx, axis=0)

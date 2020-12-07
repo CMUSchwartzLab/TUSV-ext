@@ -51,13 +51,14 @@ MAX_SOLVER_ITERS = 5000
 def get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
     np.random.seed()  # sets seed for running on multiple processors
     m = len(F)
+    l, r = Q.shape
 
     for i in xrange(0, max_iters):
 
         if i == 0:
             U = gen_U(m, n)
         else:
-            U = get_U(F, C, n)
+            U = get_U(F, C, n, R, W, l)
 
         obj_val, C, E, R, W, err_msg = get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
 
@@ -78,7 +79,7 @@ def get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
 #         C (np.array of int) [2n-1, l+r] int copy number c_k,s of mutation s in clone k
 #         n (int) number of leaves in phylogeny. 2n-1 is total number of nodes
 # output: U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
-def get_U(F, C, n):
+def get_U(F, C, n, R, W_node, l):
     m, L = F.shape
     N = 2 * n - 1
     mod = gp.Model('tusv')
@@ -90,7 +91,6 @@ def get_U(F, C, n):
         for s in xrange(0, L):
             f_hat = gp.quicksum([U[p, k] * C[k, s] for k in xrange(0, N)])
             sums.append(_get_abs(mod, F[p, s] - f_hat))
-
     mod.setObjective(gp.quicksum(sums), gp.GRB.MINIMIZE)
     mod.optimize()
     U = _as_solved(U)
@@ -149,7 +149,8 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     _set_tree_constraints(mod, E, n)
     _set_ancestry_constraints(mod, A, E, N)
     _set_cost_constraints(mod, R, C, E, n, l, r, c_max)
-    _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l)
+    #_set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l)
+    _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max)
     #_set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
     _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r)
     _set_bpf_penalty(mod, S, Pi, U, C, Gam)
@@ -249,6 +250,32 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
         mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
 
 
+### xf: improve the constraints for SV related to CNV
+def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max):
+    N = 2 * n - 1
+    X = _get_gp_3D_arr_int_var(mod, N, N, l, 3)
+    for i in xrange(0, N):
+        for j in xrange(0, N):
+            for b in xrange(0, l):  # only 0 if copy num goes from 0 to 1 across edge (i,j)
+                mod.addConstr(X[i, j, b] == 2 + C_bin[i, b] - C_bin[j, b] - E[i, j])
+    X_bin = _get_3D_bin_rep(mod, X, 3)
+    for i in xrange(0, N):
+        for j in xrange(0, N):
+            for b in xrange(0, l):  # set W as bp appearance
+                mod.addConstr(W[i, j, b] == 1 - X_bin[i, j, b])
+            for s in xrange(0, l):
+                for t in xrange(0, l):  # breakpoint pairs appear on same edge
+                    mod.addConstr(W[i, j, s] - W[i, j, t] <= 1 - G[s, t])
+                    mod.addConstr(W[i, j, s] - W[i, j, t] >= - 1 + G[s, t])
+    for b in xrange(0, l):  # breakpoints only appear once in the tree
+        mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
+    for i in xrange(0, N):
+        for j in xrange(0, N):
+            for b in xrange(0, l):
+                mod.addConstr(Gam[j, b] - Gam[i, b] >= C[j, b] - C[i, b] - W[i, j, b] - (1 - E[i, j]) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b] - Gam[i, b] <= C[j, b] - C[i, b] - W[i, j, b] + (1 - E[i, j]) * (2 * c_max + 2))
+
+
 def _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l):
     W_node = _get_gp_arr_bin_var(mod, N, l)
     for j in xrange(0, N):
@@ -303,7 +330,6 @@ def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
             sg_cpnum_est = gp.quicksum([U[p, k] * Gam[k, b] for k in xrange(0, N)])
             bp_cpnum_est = gp.quicksum([U[p, k] * C[k, b] for k in xrange(0, N)])
             mod.addConstr(S[p, b] == _get_abs(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
-
 
 #
 #   OBJECTIVE
