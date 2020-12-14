@@ -48,7 +48,7 @@ MAX_SOLVER_ITERS = 5000
 #         obj_val (float) objective value of final solution
 #         err_msg (None or str) None if no error occurs. str with error message if one does
 #  notes: l (int) is number of structural variants. r (int) is number of copy number regions
-def get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
+def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
     np.random.seed()  # sets seed for running on multiple processors
     m = len(F)
     l, r = Q.shape
@@ -58,9 +58,9 @@ def get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
         if i == 0:
             U = gen_U(m, n)
         else:
-            U = get_U(F, C, n, R, W, l)
+            U = get_U(F, F_phasing, C, n, R, W, l)
 
-        obj_val, C, E, R, W, err_msg = get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
+        obj_val, C, E, R, W, err_msg = get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
 
         # handle errors
         if err_msg != None:
@@ -79,8 +79,8 @@ def get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
 #         C (np.array of int) [2n-1, l+r] int copy number c_k,s of mutation s in clone k
 #         n (int) number of leaves in phylogeny. 2n-1 is total number of nodes
 # output: U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
-def get_U(F, C, n, R, W_node, l):
-    m, L = F.shape
+def get_U(F, F_phasing, C, n, R, W_node, l):
+    m, L = F_phasing.shape  ### xf: L=l+2r
     N = 2 * n - 1
     mod = gp.Model('tusv')
     U = _get_gp_arr_cnt_var(mod, m, N, 1.0)
@@ -89,8 +89,8 @@ def get_U(F, C, n, R, W_node, l):
     sums = []
     for p in xrange(0, m):
         for s in xrange(0, L):
-            f_hat = gp.quicksum([U[p, k] * C[k, s] for k in xrange(0, N)])
-            sums.append(_get_abs(mod, F[p, s] - f_hat))
+            f_hat = gp.quicksum([U[p, k] * C[k, s] for k in xrange(0, N)])  ### xf: Now U remains m*N, C becomes N*(l+2r), F is m*(l+2r)
+            sums.append(_get_abs(mod, F_phasing[p, s] - f_hat))
     mod.setObjective(gp.quicksum(sums), gp.GRB.MINIMIZE)
     mod.optimize()
     U = _as_solved(U)
@@ -126,21 +126,22 @@ def get_U(F, C, n, R, W_node, l):
 #         W_all (np.array of int) [2n-1, 2n-1] number of breakpoints appearing along each edge in tree
 #         err_msg (None or str) None if no error occurs. str with error message if one does
 #  notes: l (int) is number of structural variants. r (int) is number of copy number regions
-def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
+def get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     l, r = Q.shape
     m, _ = U.shape
     N = 2 * n - 1
-
+    print(l, r, m, N)
     mod = gp.Model('tusv')
 
-    C = _get_gp_arr_int_var(mod, N, l + r, c_max)
+    C = _get_gp_arr_int_var(mod, N, l + 2*r, c_max)  ### xf: C becomes N*(l+2r)
     E = _get_gp_arr_bin_var(mod, N, N)
     A = _get_gp_arr_bin_var(mod, N, N)  # ancestry matrix
-    R = _get_gp_arr_int_var(mod, N, N, c_max * r)  # rho. cost across each edge
+    R = _get_gp_arr_int_var(mod, N, N, c_max * 2*r)  # rho. cost across each edge ### xf: R also doubles because there is a cost for both alleles
     S = _get_gp_arr_cnt_var(mod, m, l, c_max)  # ess. bpf penalty for each bp in each sample
     W = _get_gp_3D_arr_bin_var(mod, N, N, l)
+    D = _get_gp_1D_arr_bin_var(mod, l)
     C_bin = _get_bin_rep(mod, C, c_max)
-    Gam = _get_gp_arr_int_var(mod, N, l, c_max)
+    Gam = _get_gp_3D_arr_int_var(mod, N, l, 2, c_max)
 
     F_seg = F[:, l:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
     Pi = np_divide_0(F[:, :l], F_seg)  # [m, l] expected bpf (ratio of bp copy num to segment copy num)
@@ -150,12 +151,12 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     _set_ancestry_constraints(mod, A, E, N)
     _set_cost_constraints(mod, R, C, E, n, l, r, c_max)
     #_set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l)
-    _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max)
+    _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max, D)
     #_set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
-    _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r)
+    _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r, D, c_max)
     _set_bpf_penalty(mod, S, Pi, U, C, Gam)
 
-    mod.setObjective(_get_objective(mod, F, U, C, R, S, lamb1, lamb2), gp.GRB.MINIMIZE)
+    mod.setObjective(_get_objective(mod, F, F_phasing, U, C, R, S, lamb1, lamb2), gp.GRB.MINIMIZE)
 
     mod.params.MIPFocus = 1
     if time_limit != None:
@@ -182,8 +183,8 @@ def get_C(F, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
 def _set_copy_num_constraints(mod, C, n, l, r):
     for b in xrange(0, l):
         mod.addConstr(C[2 * n - 2, b], gp.GRB.EQUAL, 0)  # bp has copy number 0 at root
-    for s in xrange(l, l + r):
-        mod.addConstr(C[2 * n - 2, s], gp.GRB.EQUAL, 2)  # seg has copy number 2 at root
+    for s in xrange(l, l + 2*r):
+        mod.addConstr(C[2 * n - 2, s], gp.GRB.EQUAL, 1)  # seg has copy number 2 at root  ### xf: after phasing, both alleles have 1 copy
 
 
 def _set_tree_constraints(mod, E, n):
@@ -220,16 +221,20 @@ def _set_ancestry_constraints(mod, A, E, N):
 
 def _set_cost_constraints(mod, R, C, E, n, l, r, c_max):
     N = 2 * n - 1
-    X = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
+    X1 = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
+    X2 = _get_gp_3D_arr_int_var(mod, N, N, r, c_max)
     for i in xrange(0, N):
         for j in xrange(0, N):  # no cost if no edge exists
-            for s in xrange(0, r):  # cost is difference between copy number
-                mod.addConstr(X[i, j, s] <= c_max * E[i, j])
-                mod.addConstr(X[i, j, s] >= C[i, s + l] - C[j, s + l] - (c_max + 1) * (1 - E[i, j]))
-                mod.addConstr(X[i, j, s] >= -1 * (C[i, s + l] - C[j, s + l]) - (c_max + 1) * (1 - E[i, j]))
-            mod.addConstr(R[i, j] == gp.quicksum(X[i, j, :]))
+            for s in xrange(0, r):  # cost is difference between copy number  ### xf: change the copy numbers
+                mod.addConstr(X1[i, j, s] <= c_max * E[i, j])
+                mod.addConstr(X1[i, j, s] >= C[i, s + l] - C[j, s + l] - (c_max + 1) * (1 - E[i, j]))
+                mod.addConstr(X1[i, j, s] >= -1 * (C[i, s + l] - C[j, s + l]) - (c_max + 1) * (1 - E[i, j]))
+                mod.addConstr(X2[i, j, s] <= c_max * E[i, j])
+                mod.addConstr(X2[i, j, s] >= C[i, s + l + r] - C[j, s + l + r] - (c_max + 1) * (1 - E[i, j]))
+                mod.addConstr(X2[i, j, s] >= -1 * (C[i, s + l + r] - C[j, s + l + r]) - (c_max + 1) * (1 - E[i, j]))
+            mod.addConstr(R[i, j] == (gp.quicksum(X1[i, j, :]) + gp.quicksum(X2[i, j, :])))
 
-
+### xf: removed in add_phasing
 def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
     N = 2 * n - 1
     X = _get_gp_3D_arr_int_var(mod, N, N, l, 3)
@@ -250,8 +255,8 @@ def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l):
         mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
 
 
-### xf: improve the constraints for SV related to CNV
-def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max):
+### xf: improve the constraints for SV related to CNV, replace the set_bp_appearance_constraints in add_phasing
+def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max, D):
     N = 2 * n - 1
     X = _get_gp_3D_arr_int_var(mod, N, N, l, 3)
     for i in xrange(0, N):
@@ -272,10 +277,13 @@ def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max):
     for i in xrange(0, N):
         for j in xrange(0, N):
             for b in xrange(0, l):
-                mod.addConstr(Gam[j, b] - Gam[i, b] >= C[j, b] - C[i, b] - W[i, j, b] - (1 - E[i, j]) * (2 * c_max + 1))
-                mod.addConstr(Gam[j, b] - Gam[i, b] <= C[j, b] - C[i, b] - W[i, j, b] + (1 - E[i, j]) * (2 * c_max + 2))
+                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - W[i, j, b] - (2 - E[i, j] - D[b]) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] - W[i, j, b] + (2 - E[i, j] - D[b]) * (2 * c_max + 2))
+                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - W[i, j, b] - (1 - E[i, j] + D[b]) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] - W[i, j, b] + (1 - E[i, j] + D[b]) * (2 * c_max + 2))
 
 
+### xf: removed this section
 def _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l):
     W_node = _get_gp_arr_bin_var(mod, N, l)
     for j in xrange(0, N):
@@ -311,23 +319,26 @@ def _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l):
                     [(1 - Z_bin[(i, j)][s, t]) for i in xrange(0, N) for j in xrange(0, N)]))
 
 
-def _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r):
+def _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, r, D, c_max):
     N = 2 * n - 1
     for k in xrange(0, N):
         for b in xrange(0, l):  # define copy num of segment containing breakpoint
-            mod.addConstr(Gam[k, b] == gp.quicksum([Q[b, s] * C[k, l + s] for s in xrange(0, r)]))
-            mod.addConstr(C[k, b] <= Gam[k, b])  # cp num breakpoint cant exceed cp num of seg containing bp
+            mod.addConstr(Gam[k, b, 0] == gp.quicksum([Q[b, s] * C[k, l + s] for s in xrange(0, r)])) ### xf: change to new Gamma and C matrix
+            mod.addConstr(Gam[k, b, 1] == gp.quicksum([Q[b, s] * C[k, l + s + r] for s in xrange(0, r)]))
+            mod.addConstr(C[k, b] <= Gam[k, b, 0] + (1 - D[b]) * c_max)  # cp num breakpoint cant exceed cp num of seg containing bp
+            mod.addConstr(C[k, b] <= Gam[k, b, 1] + D[b] * c_max)
     for j in xrange(0, N):
         for b in xrange(0, l):  # copy number of segment containing bp must be at least 1 if bp appears at node j
-            mod.addConstr(Gam[j, b] >= gp.quicksum([W[i, j, b] for i in xrange(0, N)]))
+            mod.addConstr(Gam[j, b, 0] + 1 - D[b] >= gp.quicksum([W[i, j, b] for i in xrange(0, N)]))
+            mod.addConstr(Gam[j, b, 1] + D[b] >= gp.quicksum([W[i, j, b] for i in xrange(0, N)]))
 
 
 def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
     m, l = S.shape
-    N, _ = Gam.shape
+    N, _, _ = Gam.shape
     for p in xrange(0, m):
         for b in xrange(0, l):
-            sg_cpnum_est = gp.quicksum([U[p, k] * Gam[k, b] for k in xrange(0, N)])
+            sg_cpnum_est = gp.quicksum([U[p, k] * (Gam[k, b, 0] + Gam[k, b, 1]) for k in xrange(0, N)])
             bp_cpnum_est = gp.quicksum([U[p, k] * C[k, b] for k in xrange(0, N)])
             mod.addConstr(S[p, b] == _get_abs(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
 
@@ -335,15 +346,15 @@ def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
 #   OBJECTIVE
 #
 
-def _get_objective(mod, F, U, C, R, S, lamb1, lamb2):  # returns expression for objective
-    m, L = F.shape
+def _get_objective(mod, F, F_phasing, U, C, R, S, lamb1, lamb2):  # returns expression for objective
+    m, L = F_phasing.shape
     N, _ = C.shape
     _, l = S.shape
     sums = []
     for p in xrange(0, m):
         for s in xrange(0, L):
             f_hat = gp.quicksum([U[p, k] * C[k, s] for k in xrange(0, N)])
-            sums.append(_get_abs(mod, F[p, s] - f_hat))
+            sums.append(_get_abs(mod, F_phasing[p, s] - f_hat))
     for i in xrange(0, N):
         for j in xrange(0, N):
             sums.append(lamb1 * R[i, j])
@@ -366,6 +377,14 @@ def _get_gp_arr_int_var(mod, m, n, vmax=None):
                 X[i, j] = mod.addVar(lb=0, vtype=gp.GRB.INTEGER)
             else:
                 X[i, j] = mod.addVar(lb=0, ub=vmax, vtype=gp.GRB.INTEGER)
+    # mod.update()
+    return X
+
+
+def _get_gp_1D_arr_bin_var(mod, m):
+    X = np.empty((m), dtype=gp.Var)
+    for i in xrange(0, m):
+        X[i] = mod.addVar(vtype=gp.GRB.BINARY)
     # mod.update()
     return X
 

@@ -35,11 +35,11 @@ def get_mats(in_dir):
 
     bp_id_to_mate_id, bp_id_to_tuple = {}, {}
 
-    BP_sample_dict, CN_sample_dict, CN_sample_rec_dict = dict(), dict(), dict()
+    BP_sample_dict, CN_sample_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major = dict(), dict(), dict(), dict(), dict()
     for i, sample in enumerate(sampleList):
         input_vcf_file = in_dir + '/' + sample
         reader = vcf.Reader(open(input_vcf_file, 'r'))
-        BP_sample_dict[sample], CN_sample_dict[sample], CN_sample_rec_dict[sample], mateIDs, toTuple = get_sample_dict(reader)
+        BP_sample_dict[sample], CN_sample_dict[sample], CN_sample_rec_dict[sample], CN_sample_rec_dict_minor[sample], CN_sample_rec_dict_major[sample], mateIDs, toTuple = get_sample_dict(reader)
         # prepend sample index to each breakpoint ID
         for k, v in mateIDs.iteritems():
             bp_id_to_mate_id[str(i+1) + k] = str(i+1) + v # add all entries from mateIDs (dict) to bp_id_to_mate_id (dict)
@@ -49,13 +49,15 @@ def get_mats(in_dir):
 
     CN_startPos_dict, CN_endPos_dict, r = get_CN_indices_dict(CN_sample_dict)
 
-    F, Q, A, H, cv_attr = make_matrices(m, l, r, sampleList, BP_sample_dict, BP_idx_dict, CN_sample_rec_dict, CN_startPos_dict, CN_endPos_dict)
+    F, F_phasing, Q, A, H, cv_attr = make_matrices(m, l, r, sampleList, BP_sample_dict, BP_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict)
     bp_attr = _inv_dic(BP_idx_dict)
 
     F = np.array(F).astype(float)
+    F_phasing = np.array(F_phasing).astype(float)
     Q = np.array(Q)
     abnormal_idx = np.where(np.sum(Q, 1) == 0)[0]
     F = np.delete(F, abnormal_idx, axis=1)
+    F_phasing = np.delete(F_phasing, abnormal_idx, axis=1)
     Q = np.delete(Q, abnormal_idx, axis=0)
 
     #sys.stdout.flush()
@@ -68,13 +70,14 @@ def get_mats(in_dir):
 
     abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
     F = np.delete(F, abnormal_idx2, axis=1)
+    F_phasing = np.delete(F_phasing, abnormal_idx2, axis=1)
     Q = np.delete(Q, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=1)
     l, r = Q.shape
     A = A[0:m, 0:l] #empty matrix
     H = H[0:m, 0:l]
-    return F, Q, G, A, H, bp_attr, cv_attr
+    return F, F_phasing, Q, G, A, H, bp_attr, cv_attr
 
 #  input: bp_id_to_mate_id
 #         BP_idx_dict[(chrom, pos, direction)] == bp_index
@@ -101,9 +104,9 @@ def make_2d_list(r,c):
 
 
 # output: cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def make_matrices(m, l, r, sampleList, BP_sample_dict, BP_idx_dict, CN_sample_rec_dict, CN_startPos_dict, CN_endPos_dict):
+def make_matrices(m, l, r, sampleList, BP_sample_dict, BP_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict):
     print("make matrices")
-    F, Q, A, H = make_2d_list(m, l + r), make_2d_list(l, r), make_2d_list(m, l), make_2d_list(m, l)
+    F, F_phasing, Q, A, H = make_2d_list(m, l + r), make_2d_list(m, l + 2*r), make_2d_list(l, r), make_2d_list(m, l), make_2d_list(m, l)
     # make list of segment boundaries. used to set Q to 1 even if bp not on edge of segment
     seg_dic = _get_seg_bgn_end_pos(CN_startPos_dict, CN_endPos_dict)
 
@@ -117,6 +120,7 @@ def make_matrices(m, l, r, sampleList, BP_sample_dict, BP_idx_dict, CN_sample_re
                     cn, direction, = temp_bp_info_dict['cn'], temp_bp_info_dict['dir']
                     bp_idx = BP_idx_dict[(chrom, pos, direction)]
                     F[sample_idx][bp_idx] = cn
+                    F_phasing[sample_idx][bp_idx] = cn
                     # A[sample_idx][bp_idx] = bdp
                     # H[sample_idx][bp_idx] = dp
 
@@ -136,13 +140,17 @@ def make_matrices(m, l, r, sampleList, BP_sample_dict, BP_idx_dict, CN_sample_re
             for (s,e) in CN_sample_rec_dict[sample][chrom]:
                 cn_idx_list = get_CN_indices(CN_startPos_dict, CN_endPos_dict, chrom, s, e)
                 cn = CN_sample_rec_dict[sample][chrom][(s,e)]
+                cn_minor = CN_sample_rec_dict_minor[sample][chrom][(s, e)]
+                cn_major = CN_sample_rec_dict_major[sample][chrom][(s, e)]
                 for cn_idx in cn_idx_list:
                     F[sample_idx][cn_idx + l] = cn
+                    F_phasing[sample_idx][cn_idx + l] = cn_minor
+                    F_phasing[sample_idx][cn_idx + l + r] = cn_major
 
     # create dictionary with key as segment index and val as tuple containing (chrm, bgn, end)
     cv_attr = { i: (chrm, bgn, end) for chrm, lst in seg_dic.iteritems() for (i, bgn, end) in lst }
 
-    return F, Q, A, H, cv_attr
+    return F, F_phasing, Q, A, H, cv_attr
     ### A and H are empty lists
 
 #  input: segs (list of tuple) tuple is ( seg_idx, bgn_pos, end_pos ) for segments of a single chromosome
@@ -239,7 +247,7 @@ def _inv_dic(dic):
 # 4. bp_id_to_mate_id (dict) key (str) is ID of breakpoint. val (str) is ID of mate
 # 5. bp_id_to_tuple   (dict) key (str) is ID of breakpoint. val (tuple) is (chrm_num, pos, direction)
 def get_sample_dict(reader):
-    BP_sample_dict, CN_sample_dict, CN_sample_rec_dict = dict(), dict(), dict()
+    BP_sample_dict, CN_sample_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_sample_rec_dict = dict(), dict(), dict(), dict(), dict()
     bp_id_to_mate_id = {} # key is id (str). val is mate id (str)
     bp_id_to_tuple = {}   # key is (chrm_num, pos, direction). key is id (str)
     bp_id_to_mate_dir = {}
@@ -267,8 +275,10 @@ def get_sample_dict(reader):
         elif is_cnv_record(rec) == True:
             if rec.CHROM not in CN_sample_dict:
                 CN_sample_dict[rec.CHROM] = dict()
-                CN_sample_rec_dict[rec.CHROM] = dict()
-            print(rec.CHROM, rec.INFO['END'])
+                CN_sample_rec_dict[rec.CHROM] = dict() ### xf
+                CN_sample_rec_dict_minor[rec.CHROM] = dict() ### xf
+                CN_sample_rec_dict_major[rec.CHROM] = dict() ### xf
+            print(rec.CHROM, rec.INFO['END'],rec.samples[0].data.CN)
             if isinstance(rec.INFO['END'], list):
                 info_end = rec.INFO['END'][0]
             else:
@@ -276,6 +286,9 @@ def get_sample_dict(reader):
             CN_sample_dict[rec.CHROM][rec.POS] = ['s']
             CN_sample_dict[rec.CHROM][info_end] = ['e']
             CN_sample_rec_dict[rec.CHROM][(rec.POS, info_end)] = sum(rec.samples[0].data.CN)
+            CN_sample_rec_dict_minor[rec.CHROM][(rec.POS, info_end)] = rec.samples[0].data.CN[0]
+            CN_sample_rec_dict_major[rec.CHROM][(rec.POS, info_end)] = rec.samples[0].data.CN[1]
+
 
     for chrom in BP_sample_dict:
         for pos in BP_sample_dict[chrom]:
@@ -289,7 +302,7 @@ def get_sample_dict(reader):
 
                 bp_id_to_tuple[bp_id] = (chrom, pos, my_dir)
 
-    return BP_sample_dict, CN_sample_dict, CN_sample_rec_dict, bp_id_to_mate_id, bp_id_to_tuple
+    return BP_sample_dict, CN_sample_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, bp_id_to_mate_id, bp_id_to_tuple
 
 
 # CN_startPos_dict: key: (chrom, startPos), val: idx

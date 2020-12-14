@@ -59,12 +59,12 @@ def main(argv):
 #           in addition to any segments contining an SV as thos are manditory for the SV. None is all segments
 def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, num_processors, time_limit, metadata_fname, num_seg_subsamples, should_overide_lambdas):
         print("unmix")
-	F_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
+	F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
 	print(F_full,Q,G)
-	Q, G, A, H, F_full = check_valid_input(Q, G, A, H, F_full)
+	Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)
 
-	F, Q, org_indxs = randomly_remove_segments(F_full, Q, num_seg_subsamples)
-
+	F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)
+	print(F_phasing.shape)
 	# replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
 	if should_overide_lambdas:
 		m = len(F)
@@ -75,7 +75,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
 	Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
 	num_complete = 0
 	for i in xrange(0, num_restarts):
-		U, C, E, R, W, obj_val, err_msg = sv.get_UCE(F, Q, G, A, H, n, c_max, lamb1, lamb2, num_cd_iters, time_limit)
+		U, C, E, R, W, obj_val, err_msg = sv.get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, num_cd_iters, time_limit)
 		printnow(str(i + 1) + ' of ' + str(num_restarts) + ' random restarts complete\n')
 		Us.append(U)
 		Cs.append(C)
@@ -119,10 +119,10 @@ def _arg_val_to_str(v):
 # output: F (np.array) [m, l+r'] r' is reduced number of segments
 #         Q (np.array) [l, r']
 #         org_indices (list of int) for each segment in output, the index of where it is found in input F
-def randomly_remove_segments(F, Q, num_seg_subsamples):
+def randomly_remove_segments(F, F_phasing, Q, num_seg_subsamples):
 	print(Q)
 	if num_seg_subsamples is None:
-		return F, Q, None
+		return F, F_phasing, Q, None
 	l, r = Q.shape
 	l, r = int(l), int(r)
 
@@ -133,7 +133,7 @@ def randomly_remove_segments(F, Q, num_seg_subsamples):
 	non_bp_segs = [ s for s in xrange(0, r) if s not in bp_segs ]  # all non breakpoint containing segments
 	num_seg_subsamples = min(num_seg_subsamples, len(non_bp_segs)) # ensure not removing more segs than we have
 	if num_seg_subsamples == len(non_bp_segs):
-		return F, Q, None
+		return F, F_phasing, Q, None
 
 	keeps = random_subset(non_bp_segs, num_seg_subsamples) # segments to keep
 	keeps = sorted(bp_segs + keeps)
@@ -141,8 +141,9 @@ def randomly_remove_segments(F, Q, num_seg_subsamples):
 
 	Q = np.delete(Q, drops, axis = 1) # remove columns for segments we do not keep
 	F = np.delete(F, [ s + l for s in drops ], axis = 1)
-	
-	return F, Q, [ s + l for s in keeps ]
+	F_phasing = np.delete(F_phasing, [ s + l + r for s in drops ], axis=1)
+	F_phasing = np.delete(F_phasing, [s + l for s in drops], axis=1)
+	return F, F_phasing, Q, [ s + l for s in keeps ]
 
 # returns a subset of lst containing k random elements
 def random_subset(lst, k):
@@ -178,14 +179,19 @@ def printnow(s):
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
 # output: w (vcf_help.Writer) writer to be used to write entire .vcf file
 def build_vcf_writer(F, C, org_indices, G, bp_attr, cv_attr, metadata_fname):
+	print(org_indices)
 	m, _ = F.shape
 	n, _ = C.shape
 	l, _ = G.shape
 	r = F.shape[1] - l
+	print(C[:,:].shape, r)
 	
 	if org_indices is not None: # only fill in values for segments not used if did not use some segments
-		c_org_indices = [ i for i in xrange(0, l) ] + org_indices
-		C_out = -1*np.ones((n, l+r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
+		org_indices_minor = [org_indices[i] + r for i in range(len(org_indices))]
+		c_org_indices = [ i for i in xrange(0, l) ] + org_indices + org_indices_minor
+		print(c_org_indices,len(c_org_indices))
+		C_out = -1*np.ones((n, l+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
+		print(C_out.shape,C_out[:, c_org_indices].shape)
 		C_out[:, c_org_indices] = C[:, :]           #   -1 is an indicator that this column should be omitted in validation
 		C = C_out
 
@@ -227,8 +233,9 @@ def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, org_indices, writer):
 	n, _ = C.shape
 	
 	if org_indices is not None:
-		c_org_indices = [ i for i in xrange(0, l) ] + org_indices
-		C_out = -1*np.ones((n, l+r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
+		org_indices_minor = [org_indices[i] + r for i in range(len(org_indices))]
+		c_org_indices = [ i for i in xrange(0, l) ] + org_indices + org_indices_minor
+		C_out = -1*np.ones((n, l+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
 		C_out[:, c_org_indices] = C[:, :]           #   -1 is an indicator that this column should be omitted in validation
 	else:
 		C_out = C
@@ -301,7 +308,7 @@ def write_xml(fname, E, C, l):
 #        A (np.array of int) [m, l] a_p,b is number of mated reads for breakpoint b in sample p
 #        H (np.array of int) [m, l] h_p,b is number of total reads for breakpoint b in sample p
 #  does: exits with error message if any of the input is not valid
-def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
+def check_valid_input(Q, G, A, H, F_full,F_phasing_full):  ### A and H are empty matrices
 	print("check valid input")
 	l, r = np.shape(Q)
 	print(l,r)
@@ -311,6 +318,7 @@ def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 	A_msg = 'There is an issue with input integer matricies A and H (indicating the number of reads mapped to each mated breakpoint and the number of total reads mapping to a breakpoint). The number of mated reads must be less or equal to the total reads and both should be non negative.'
 	print(Q[np.where(np.sum(Q, axis=1) != 1)])
 	sys.stdout.flush()
+	'''
 	size_upp = 3500
 	if l > size_upp:
 		idx = np.array(random.sample(list(range(l)), l - size_upp))
@@ -318,6 +326,7 @@ def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 		G = np.delete(G, idx, axis=0)
 		G = np.delete(G, idx, axis=1)
 		F_full = np.delete(F_full, idx, axis=1)
+		F_phasing_full = np.delete(F_phasing_full, idx, axis=1)
 		l, r = np.shape(Q)
 	print(l, r)
 	size_low = 1000
@@ -327,24 +336,32 @@ def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 		G = np.delete(G, idx, axis=0)
 		G = np.delete(G, idx, axis=1)
 		F_full = np.delete(F_full, idx, axis=1)
+		F_phasing_full = np.delete(F_phasing_full, idx, axis=1)
+	
 		abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
-		F_full = np.delete(F_full, abnormal_idx2, axis=1)
 		Q = np.delete(Q, abnormal_idx2, axis=0)
 		G = np.delete(G, abnormal_idx2, axis=0)
 		G = np.delete(G, abnormal_idx2, axis=1)
+		F_full = np.delete(F_full, abnormal_idx2, axis=1)
+		F_phasing_full = np.delete(F_phasing_full, abnormal_idx2, axis=1)
 		l, r = np.shape(Q)
 		A = A[0:m, 0:l]
 		H = H[0:m, 0:l]
 		print(l,r)
-		raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
+		'''
+	raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
+
 	abnormal_idx3 = np.where(np.sum(G, 0) != 2)[0]
 	print(abnormal_idx3)
+	Q = np.delete(Q, abnormal_idx3, axis=0)
 	G = np.delete(G, abnormal_idx3, axis=0)
 	G = np.delete(G, abnormal_idx3, axis=1)
 	F_full = np.delete(F_full, abnormal_idx3, axis=1)
-	Q = np.delete(Q, abnormal_idx3, axis=0)
+	F_phasing_full = np.delete(F_phasing_full, abnormal_idx3, axis=1)
 	l, r = np.shape(Q)
 	print(G)
+	print(l, r)
+
 	raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
 	for i in xrange(0, l):
 		for j in xrange(0, l):
@@ -354,7 +371,7 @@ def check_valid_input(Q, G, A, H, F_full):  ### A and H are empty matrices
 	for p in xrange(0, m):
 		for b in xrange(0, l):
 			raiseif(A[p, b] < 0 or A[p, b] > H[p, b], A_msg)
-		return Q, G, A, H, F_full
+		return Q, G, A, H, F_full, F_phasing_full
 # raises exception if boolean is true
 def raiseif(should_raise, msg):
 	if should_raise:
