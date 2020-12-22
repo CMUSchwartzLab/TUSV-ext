@@ -204,7 +204,7 @@ class GeneProf:
 	#                   key: "mated_reads", val: number of reads containing both curr and mated bp (int)
 	#                   key: "total_reads", val: number of total reads (int)
 	#                   key: "copy_num", val: copy number of current bp (int)
-	def get_sv_read_nums_dict(self, cov, read_len):
+	def get_sv_read_nums_dict(self, cov, read_len):  ### xf: generate sv for both alleles separately and then combine them
 		result = dict()
 		for (idx, pm) in self.chrom_dict:
 			if idx not in result:

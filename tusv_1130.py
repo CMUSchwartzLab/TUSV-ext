@@ -93,7 +93,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
 
 	writer = build_vcf_writer(F_full, Cs[best_i], org_indxs, G, bp_attr, cv_attr, metadata_fname)
 
-	write_to_files(out_dir, Us[best_i], Cs[best_i], Es[best_i], Rs[best_i], Ws[best_i], F, obj_vals[best_i], F_full, org_indxs, writer)
+	write_to_files(out_dir, Us[best_i], Cs[best_i], Es[best_i], Rs[best_i], Ws[best_i], F, obj_vals[best_i], F_full, F_phasing_full, org_indxs, writer)
 
 # creates a readme file with the command in it. 
 def write_readme(dname, args, script_name = os.path.basename(__file__)):
@@ -225,7 +225,7 @@ def build_vcf_writer(F, C, org_indices, G, bp_attr, cv_attr, metadata_fname):
 #        F_full (np.array) [m, l+r] mixed copy number for all l bps and r segments for each sample
 #        org_indices (list of int) for each segment in F, the index of where it is found in input F_all
 #        writer (vcf_help.Writer) writer to be used to write entire .vcf file
-def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, org_indices, writer):
+def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, F_phasing_full, org_indices, writer):
 	l = F.shape[1]
 	if org_indices is not None:
 		l = F.shape[1] - len(org_indices)
@@ -240,7 +240,7 @@ def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, org_indices, writer):
 	else:
 		C_out = C
 
-	fnames = [ d + fname for fname in ['U.tsv', 'C.tsv', 'T.dot', 'F.tsv', 'W.tsv', 'obj_val.txt', 'unmixed.vcf', 'unmixed.xml'] ]
+	fnames = [ d + fname for fname in ['U.tsv', 'C.tsv', 'T.dot', 'F.tsv',  'W.tsv', 'obj_val.txt', 'unmixed.vcf', 'unmixed.xml','F_phasing.tsv'] ]
 	for fname in fnames:
 		fm.touch(fname)
 	np.savetxt(fnames[0], U, delimiter = '\t', fmt = '%.8f')
@@ -248,6 +248,7 @@ def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, org_indices, writer):
 	np.savetxt(fnames[3], F_full, delimiter = '\t', fmt = '%.8f')
 	np.savetxt(fnames[4], W, delimiter = '\t', fmt = '%.8f')
 	np.savetxt(fnames[5], np.array([obj_val]), delimiter = '\t', fmt = '%.8f')
+	np.savetxt(fnames[8], F_phasing_full, delimiter='\t', fmt='%.8f')
 	writer.write(open(fnames[6], 'w'))
 	dot = to_dot(E, R, W)
 	open(fnames[2], 'w').write(dot.source) # write tree T in dot format

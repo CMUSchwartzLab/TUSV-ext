@@ -21,7 +21,7 @@ def printerr(s):
 	sys.stderr.write(s)
 	sys.stderr.flush()
 
-class ChrmProf:
+class ChrmProf:  ### xf: the profile specifically for one chromosome (allele specific)
 	# n (length of chromosome)
 	def __init__(self, n):
 		self.n = n
@@ -42,7 +42,6 @@ class ChrmProf:
 			cps.append(len(cur.children))
 			cur = cur.r
 		return bgns, ends, cps
-
 
 	def get_sv_read_nums(self, cov, read_len):
 		n = self.n
@@ -124,7 +123,7 @@ class ChrmProf:
 		return True
 
 	# duplicate region from bgn to end. returns boolean for complete or not
-	def amp(self, bgn, end):
+	def amp(self, bgn, end):  	## xf: it uses a linked list data structure
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
@@ -441,6 +440,7 @@ def _get_cur_pos(cur, isBgn):
 		return oCur.end, isLeft
 	return oCur.bgn, isLeft
 
+
 def _add_sv_to_dict(svs, cur, isBgn):
 	matePos, mateIsLeft, isAdj = _get_mated_pos(cur, isBgn)
 	curPos, curIsLeft = _get_cur_pos(cur, isBgn)
@@ -463,6 +463,7 @@ def _add_sv_to_dict(svs, cur, isBgn):
 		svs[curTup]['mated_reads'] += 1
 		svs[curTup]['mate'] = mateTup
 		svs[mateTup]['mate'] = curTup
+
 
 def _append_bp_copy_num(svs, mut_head):
 	cur = mut_head

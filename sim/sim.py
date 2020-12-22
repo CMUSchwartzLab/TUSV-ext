@@ -90,7 +90,7 @@ def main(argv):
 		os.makedirs(outputFolder)
 	
 		l = random_get_tree(n) # list
-		edge_list = get_edges(l)
+		edge_list = get_edges(l)  ###xf: generate edges list with format of [(0,1,'r'/'l'),...]
 		
 		gp = gnpr.GeneProf(chrom_dict, constants_dict)
 
@@ -146,7 +146,7 @@ def all_possible_trees_helper(n):
 
 # input n (number of leaves), output a random tree represented by a list.
 # tree node is represented by 1.
-def random_get_tree(n):
+def random_get_tree(n):  ###xf: select a random tree from all possible trees
 	l = all_possible_trees(n)
 	idx = random.randint(0, len(l) - 1)
 	return l[idx]
@@ -649,7 +649,7 @@ class Tree:
 			print 'node', idx, ':', self.idx_node_dict[idx].geneProf.print_chrm_seq()
 
 
-	def add_mutations_along_edges(self, node, geneprof_list):
+	def add_mutations_along_edges(self, node, geneprof_list): ### xf: node is Treenode class
 		if not node:
 			return
 		curr_gp = node.geneProf
@@ -659,9 +659,9 @@ class Tree:
 		if node.left != None:
 			curr_gp_copied_left = curr_gp.deepcopy()
 			# reset copied_node.geneProf.mutCount and copied_node.geneProf.maxCount
-			curr_gp_copied_left.mutCount, curr_gp_copied_left.maxCount = 0, curr_gp_copied_left.get_mut_count()
+			curr_gp_copied_left.mutCount, curr_gp_copied_left.maxCount = 0, curr_gp_copied_left.get_mut_count() ### xf: get_mut_count: random.poisson(exp_mut_rate)
 
-			curr_gp_copied_left.multi_mutations(geneprof_list) 
+			curr_gp_copied_left.multi_mutations(geneprof_list) ### xf: generate multiple mutations
 			node.left.geneProf = curr_gp_copied_left
 			self.add_mutations_along_edges(node.left, geneprof_list)
 
