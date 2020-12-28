@@ -47,7 +47,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		n = self.n
 		svs = {}
 		cur = self.mut
-		while cur != None:
+		while cur != None:  ###xf: go through along the chromosome
 			_add_sv_to_dict(svs, cur, True)
 			_add_sv_to_dict(svs, cur, False)
 			cur = cur.r
