@@ -129,7 +129,8 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 
 		insR, head, tail = _copy_from_to(self.mut, bgn, end) # copy list from bgn to end
-		### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL
+		### xf: copy means copy the whole identity including the parent-children relationship
+		### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL for MutNode
 		insL = insR.r # node to go after tail
 		insR.r = head
 		head.l = insR
@@ -272,7 +273,7 @@ class _Node:
 		return '[' + str(self.bgn) + ',' + str(self.end) + ']'
 
 
-class _OrgNode(_Node):
+class _OrgNode(_Node): ### xf: OrgNode is a single node which will be splitted during mutation. It will be linked to multiple MutNodes for mapping.
 	def __init__(self, bgn, end):
 		self.children = [] # no mutated sections
 		self.l = None      # no left or right pointers
@@ -411,7 +412,7 @@ def _is_between(x, a, b):
 #                                                           cur was found next to bgn on mate
 #         isAdj (bool) True if mate is adjacent to cur in original genome. this will not increment num mated reads
 def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
-	mate = cur.r
+	mate = cur.r  ### xf: mated pairs are doomed to be adjacent in MutNode
 	if isBgn:
 		mate = cur.l
 
