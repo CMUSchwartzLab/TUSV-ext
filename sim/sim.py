@@ -264,6 +264,7 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 	d1 = dict()
 	for idx in range(1, n + 1):
 		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
+		###xf: for all chromosomes for both alleles
 		for chrom in temp_bp_dict.keys():
 			if chrom not in d1:
 				d1[chrom] = set()

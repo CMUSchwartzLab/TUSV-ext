@@ -123,12 +123,13 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		return True
 
 	# duplicate region from bgn to end. returns boolean for complete or not
-	def amp(self, bgn, end):  	## xf: it uses a linked list data structure
+	def amp(self, bgn, end):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 
 		insR, head, tail = _copy_from_to(self.mut, bgn, end) # copy list from bgn to end
+		### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL
 		insL = insR.r # node to go after tail
 		insR.r = head
 		head.l = insR
@@ -162,7 +163,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			printerr('cannot split at k = ' + str(k) + '\n')
 			return
 
-		# find orgNode corresponding to the mutNode where split will occur
+		# find orgNode along the genome corresponding to the mutNode where split will occur
 		splitMut = self.mut
 		while splitMut != None and not (splitMut.bgn <= k and k <= splitMut.end):
 			splitMut = splitMut.r
@@ -270,6 +271,7 @@ class _Node:
 	def get_pos_str(self):
 		return '[' + str(self.bgn) + ',' + str(self.end) + ']'
 
+
 class _OrgNode(_Node):
 	def __init__(self, bgn, end):
 		self.children = [] # no mutated sections
@@ -347,9 +349,10 @@ def _is_already_mut_end(cur, end):
 	return False
 
 # fm (int) is bgn index of one of the nodes. to (int) is end of one of the nodes
+### xf: head means the current start MutNode
 def _copy_from_to(head, fm, to):
 	oldhead = head
-	while head != None and head.bgn != fm: # make head the beggining of where to copy
+	while head != None and head.bgn != fm: # make head the beginning of where to copy
 		head = head.r
 
 	curA = head
@@ -407,7 +410,7 @@ def _is_between(x, a, b):
 #         isLeft (bool) mate OrgNode's orientation. True if cur was found next to end on mate. False if
 #                                                           cur was found next to bgn on mate
 #         isAdj (bool) True if mate is adjacent to cur in original genome. this will not increment num mated reads
-def _get_mated_pos(cur, isBgn):
+def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
 	mate = cur.r
 	if isBgn:
 		mate = cur.l

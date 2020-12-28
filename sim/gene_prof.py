@@ -128,7 +128,7 @@ class GeneProf:
 		return mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos
 
 
-    # make a single mutation
+    # make a single mutation ###xf: lack translocation
 	def mutate(self, geneprof_list):
 
 		mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos = self.get_legal_random_mutation(geneprof_list)
