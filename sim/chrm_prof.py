@@ -412,7 +412,7 @@ def _is_between(x, a, b):
 #                                                           cur was found next to bgn on mate
 #         isAdj (bool) True if mate is adjacent to cur in original genome. this will not increment num mated reads
 def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
-	mate = cur.r  ### xf: mated pairs are doomed to be adjacent in MutNode
+	mate = cur.r  ### xf: mated pairs are doomed to be adjacent in MutNode,  mate | cur or cur | mate
 	if isBgn:
 		mate = cur.l
 
@@ -446,7 +446,7 @@ def _get_cur_pos(cur, isBgn):
 
 
 def _add_sv_to_dict(svs, cur, isBgn):
-	matePos, mateIsLeft, isAdj = _get_mated_pos(cur, isBgn)
+	matePos, mateIsLeft, isAdj = _get_mated_pos(cur, isBgn)   ### xf: mate | cur
 	curPos, curIsLeft = _get_cur_pos(cur, isBgn)
 	if matePos is None:
 		return
@@ -463,7 +463,7 @@ def _add_sv_to_dict(svs, cur, isBgn):
 
 	svs[curTup]['total_reads'] += 1
 
-	if not isAdj:
+	if not isAdj: ### xf: not include normal adjacent pairs (need to adjust if we include SNVs)
 		svs[curTup]['mated_reads'] += 1
 		svs[curTup]['mate'] = mateTup
 		svs[mateTup]['mate'] = curTup

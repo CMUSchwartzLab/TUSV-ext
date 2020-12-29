@@ -654,7 +654,7 @@ class Tree:
 		if not node:
 			return
 		curr_gp = node.geneProf
-		geneprof_list.append(curr_gp)
+		geneprof_list.append(curr_gp) ### xf: make sure each calling of add_mutations_along_edges will be saved, node is resursive
 		# print 'node:', node.index, 'geneprof_list:', geneprof_list
 
 		if node.left != None:

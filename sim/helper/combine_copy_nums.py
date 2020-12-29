@@ -21,7 +21,7 @@
 #         ends (list of int) [num_unioned_segments] ends[s] is ending    position of segment s
 #         cps  (list of int) [num_unioned_segments] cps[s]  is fractional copy number of segment s
 def combine_copy_nums(triplets, usages):
-	posList, pos_dir_dict = get_pos_info_dict(triplets)
+	posList, pos_dir_dict = get_pos_info_dict(triplets) ### xf: create position dictionary
 
 	combined_segment_pos_list = get_combined_segment_pos(posList, pos_dir_dict) # list of (bgnPos,endPos)
 
@@ -32,15 +32,15 @@ def combine_copy_nums(triplets, usages):
 		res_bgns.append(bgnPos)
 		res_ends.append(endPos)
 
-	res_cps = [0] * len(res_bgns)
+	res_cps = [[0] * len(res_bgns)] * 2
 	for i in range(len(triplets)):
 		[bgns, ends, cps] = triplets[i]
 		for j in range(len(bgns)):
 			idx_list = get_indices_for_segment(bgn2idx, end2idx, bgns[j], ends[j])
 			for k in idx_list:
-				res_cps[k] += float("{0:.2f}".format(cps[j] * usages[i]))
+				res_cps[i][k] += float("{0:.2f}".format(cps[j] * usages[i]))
 
-	return [res_bgns, res_ends, res_cps]
+	return [res_bgns, res_ends, res_cps[0], res_cps[1]]
 	
 
 def get_pos_info_dict(triplets):
