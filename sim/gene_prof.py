@@ -164,8 +164,8 @@ class GeneProf:
 				(bgns_p, ends_p, cps_p) = self.chrom_dict[(idx, 0)].get_copy_nums()
 				(bgns_m, ends_m, cps_m) = self.chrom_dict[(idx, 1)].get_copy_nums()
 				triplets = [[bgns_p, ends_p, cps_p], [bgns_m, ends_m, cps_m]]
-				[res_bgns, res_ends, res_cps] = ccn.combine_copy_nums(triplets, usages) ### xf: place where allelic CNVs are combined
-				result[idx] = (res_bgns, res_ends, res_cps)
+				[res_bgns, res_ends, res_cps_1, res_cps_2] = ccn.combine_copy_nums_allelic(triplets, usages) ### xf: place where allelic CNVs are combined, modified the function to be allelic specific CNs
+				result[idx] = (res_bgns, res_ends, res_cps_1, res_cps_2)
 		
 		return result
 

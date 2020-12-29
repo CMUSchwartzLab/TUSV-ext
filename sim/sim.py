@@ -106,6 +106,7 @@ def main(argv):
 
 		l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(t, n, constants_dict)
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
+		### xf: combine the segment settings from both two alleles and also different node from mutations
 		C = generate_c(t, n, constants_dict)
 
 		c_p, c_m = generate_seg_cp_paternal(t, n)
@@ -298,13 +299,13 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 #      val: index
 def get_seg_copy_num_idx_dict(tree, n):
 	d1 = dict()
-	for idx in range(1, n + 1):
+	for idx in range(1, n + 1): ### xf: go through all the nodes in the tree
 		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
 		for chrom in temp_copy_nums_dict.keys():
 			if chrom not in d1:
 				d1[chrom] = list()
-			(bgns, ends, cps) = temp_copy_nums_dict[chrom]
-			d1[chrom].append([bgns, ends, cps])
+			(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
+			d1[chrom].append([bgns, ends, cps1, cps2])
 
 	idx = 0
 	sorted_chrom = sorted(d1.keys())
@@ -315,7 +316,7 @@ def get_seg_copy_num_idx_dict(tree, n):
 		d2[chrom] = dict()
 		# random generate usages to match the input format
 		usages = [float(1/len(d1[chrom]))] * len(d1[chrom])
-		[res_bgns, res_ends, res_cps] = ccn.combine_copy_nums(d1[chrom], usages)
+		[res_bgns, res_ends, res_cps1, res_cps2] = ccn.combine_copy_nums_quartet(d1[chrom], usages)
 
 		for i in range(len(res_bgns)):
 			d2[chrom][(res_bgns[i], res_ends[i])] = idx
@@ -336,13 +337,13 @@ def make_2d_list(rows, cols):
 # loop through each node in tree(Tree), 
 # for each treeNode: use self.get_copy_nums_dict() to get bgns, ends, cps list for each chromosomes
 #                    use self.get_sv_read_nums_dict(cov, read_len) to get bps and their corresponding information for each chromosomes
-# output c ((2n-1)*(l+r) matrix) 
+# output c ((2n-1)*(l+r) matrix) ### xf: --> (2n-1)*(l+2r)
 def generate_c(tree, n, constants_dict):
 
 	l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(tree, n, constants_dict)
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 
-	c = make_2d_list(len(tree.node_list), (l + r))
+	c = make_2d_list(len(tree.node_list), (l + 2*r))
 	for idx in tree.node_list:
 		row = idx - 1
 
@@ -357,13 +358,19 @@ def generate_c(tree, n, constants_dict):
 		# add copy number for segments
 		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
 		for chrom in temp_copy_nums_dict:
-			(bgns, ends, cps) = temp_copy_nums_dict[chrom]
+			(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
 			for i in range(len(bgns)):
-				cp = cps[i]
+				cp1 = cps1[i]
+				cp2 = cps2[i]
+				#if float(cp1) > float(cp2):  ### xf: make sure the copy numbers are in the order of minor, major
+					#temp = cp1
+					#cp1 = cp2
+					#cp2 = temp
 				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
 				for j in range(len(seg_indices_list)):
 					col = seg_indices_list[j] + l
-					c[row][col] = cp
+					c[row][col] = cp1
+					c[row][col + len(seg_indices_list)] = cp2
 
 	result = np.array(c)
 
