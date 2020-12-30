@@ -50,20 +50,18 @@ def combine_copy_nums_allelic(triplets, usages):
 	combined_segment_pos_list = get_combined_segment_pos(posList, pos_dir_dict) # list of (bgnPos,endPos)
 
 	bgn2idx, end2idx = get_indices_dict(combined_segment_pos_list) # key: bgn or end position, val: idx of segment in combined chrom
-
 	res_bgns, res_ends = list(), list()
 	for (bgnPos,endPos) in combined_segment_pos_list:
 		res_bgns.append(bgnPos)
 		res_ends.append(endPos)
 
-	res_cps = [[0] * len(res_bgns)] * 2
+	res_cps = [[0] * len(res_bgns)] + [[0] * len(res_bgns)]
 	for i in range(len(triplets)):
 		[bgns, ends, cps] = triplets[i]
 		for j in range(len(bgns)):
 			idx_list = get_indices_for_segment(bgn2idx, end2idx, bgns[j], ends[j])
 			for k in idx_list:
 				res_cps[i][k] += float("{0:.2f}".format(cps[j] * usages[i]))
-
 	return [res_bgns, res_ends, res_cps[0], res_cps[1]] ### xf: allelic specific CNs
 
 def get_pos_info_dict(triplets):

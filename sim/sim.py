@@ -90,11 +90,13 @@ def main(argv):
 		os.makedirs(outputFolder)
 	
 		l = random_get_tree(n) # list
+		print(l)
 		edge_list = get_edges(l)  ###xf: generate edges list with format of [(0,1,'r'/'l'),...]
 		
 		gp = gnpr.GeneProf(chrom_dict, constants_dict)
 
 		t = Tree(edge_list, gp)
+		print(t.node_list)
 
 		geneprof_list = list()
 
@@ -171,33 +173,48 @@ def get_edges(l):
 	n = get_number_of_leaves(l)
 	p = 2 * n - 1 # idx of root node
 	leaf_list = list(range(1, n + 1)) # indices of leaf nodes
+	steiner_list = list(range(n, p, 1)) ### xf: debug the tree generation part by adding a fixed steiner node list
 	result = list()
-	get_edges_helper(l, n, leaf_list, p, result)
+	get_edges_helper(l, n, leaf_list, p, result, steiner_list)
 	return result
 
 
-def get_edges_helper(l, n, leaf_list, p, result):
+def get_edges_helper(l, n, leaf_list, p, result, steiner_node_list): ### xf: debug the tree generation part by adding a fixed steiner node list
 	left, right = l[0], l[1]
 	if left == 1 and right == 1:
+		print('1')
 		result.append((leaf_list[0], p, 'l'))
 		result.append((leaf_list[1], p, 'r'))
+		print(result)
 	elif left == 1 and right != 1:
+		print('2')
 		result.append((leaf_list[0], p, 'l'))
-		result.append((p - 1, p, 'r'))
-		get_edges_helper(l[1], n, leaf_list[1:], p - 1, result)
+		steiner_node = steiner_node_list.pop()
+		result.append((steiner_node, p, 'r'))
+		print(result)
+		get_edges_helper(l[1], n-1, leaf_list[1:], steiner_node, result, steiner_node_list)
 	elif right == 1 and left != 1:
+		print('3')
 		result.append((leaf_list[-1], p, 'r'))
-		result.append((p-1, p, 'l'))
-		get_edges_helper(l[0], n-1, leaf_list[:-1], p - 1, result)
+		steiner_node = steiner_node_list.pop()
+		result.append((steiner_node, p, 'l'))
+		print(result)
+		get_edges_helper(l[0], n-1, leaf_list[:-1], steiner_node, result, steiner_node_list)
+
+
 	else:
+		print('4')
 		n_left = get_number_of_leaves(l[0])
-		leaf_list_left = list(range(1, n_left + 1))
-		leaf_list_right = list(range(n_left + 1, n + 1))
-		result.append((p - 2, p, 'l')) # left
-		result.append((p - 1, p, 'r')) # right
-		get_edges_helper(l[0], n_left, leaf_list_left, p - 2, result) # left
-		get_edges_helper(l[1], n, leaf_list_right, p - 1, result) # right
-	return result
+		leaf_list_left = leaf_list[:n_left]
+		leaf_list_right = leaf_list[n_left:]
+		steiner_node1 = steiner_node_list.pop()
+		steiner_node2 = steiner_node_list.pop()
+		result.append((steiner_node1, p, 'l')) # left
+		result.append((steiner_node2, p, 'r')) # right
+		get_edges_helper(l[0], n_left, leaf_list_left, steiner_node1, result, steiner_node_list) # left
+		get_edges_helper(l[1], n - n_left, leaf_list_right, steiner_node2, result, steiner_node_list) # right
+		print(result)
+	return result, steiner_node_list
 
 
 # pwd: os.path.dirname(os.path.realpath(__file__))
@@ -344,9 +361,10 @@ def generate_c(tree, n, constants_dict):
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 
 	c = make_2d_list(len(tree.node_list), (l + 2*r))
+	print(tree.node_list)
 	for idx in tree.node_list:
 		row = idx - 1
-
+		print(row)
 		# add copy number for break points
 		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
 		for chrom in temp_bp_dict:
