@@ -182,28 +182,19 @@ def get_edges(l):
 def get_edges_helper(l, n, leaf_list, p, result, steiner_node_list): ### xf: debug the tree generation part by adding a fixed steiner node list
 	left, right = l[0], l[1]
 	if left == 1 and right == 1:
-		print('1')
 		result.append((leaf_list[0], p, 'l'))
 		result.append((leaf_list[1], p, 'r'))
-		print(result)
 	elif left == 1 and right != 1:
-		print('2')
 		result.append((leaf_list[0], p, 'l'))
 		steiner_node = steiner_node_list.pop()
 		result.append((steiner_node, p, 'r'))
-		print(result)
 		get_edges_helper(l[1], n-1, leaf_list[1:], steiner_node, result, steiner_node_list)
 	elif right == 1 and left != 1:
-		print('3')
 		result.append((leaf_list[-1], p, 'r'))
 		steiner_node = steiner_node_list.pop()
 		result.append((steiner_node, p, 'l'))
-		print(result)
 		get_edges_helper(l[0], n-1, leaf_list[:-1], steiner_node, result, steiner_node_list)
-
-
 	else:
-		print('4')
 		n_left = get_number_of_leaves(l[0])
 		leaf_list_left = leaf_list[:n_left]
 		leaf_list_right = leaf_list[n_left:]
@@ -213,7 +204,6 @@ def get_edges_helper(l, n, leaf_list, p, result, steiner_node_list): ### xf: deb
 		result.append((steiner_node2, p, 'r')) # right
 		get_edges_helper(l[0], n_left, leaf_list_left, steiner_node1, result, steiner_node_list) # left
 		get_edges_helper(l[1], n - n_left, leaf_list_right, steiner_node2, result, steiner_node_list) # right
-		print(result)
 	return result, steiner_node_list
 
 
@@ -361,10 +351,8 @@ def generate_c(tree, n, constants_dict):
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 
 	c = make_2d_list(len(tree.node_list), (l + 2*r))
-	print(tree.node_list)
 	for idx in tree.node_list:
 		row = idx - 1
-		print(row)
 		# add copy number for break points
 		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
 		for chrom in temp_bp_dict:
@@ -388,10 +376,9 @@ def generate_c(tree, n, constants_dict):
 				for j in range(len(seg_indices_list)):
 					col = seg_indices_list[j] + l
 					c[row][col] = cp1
-					c[row][col + len(seg_indices_list)] = cp2
+					c[row][col + r] = cp2
 
 	result = np.array(c)
-
 	return result
 
 

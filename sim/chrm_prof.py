@@ -90,7 +90,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 
-		head, tail = _get_head_tail(self.mut, bgn, end)
+		head, tail = _get_head_tail(self.mut, bgn, end) ### xf: "# head is MutNode with bgn and tail is MutNode with end."
 
 		newL = head.l
 		newR = tail.r
