@@ -101,7 +101,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			newL.r = newR
 		if newR != None:
 			newR.l = newL
-		head.l = None
+		head.l = None  ### xf: detach the removed segment MutNode
 		tail.r = None
 
 		# remove old nodes from OrgNode children list and delete old nodes
