@@ -21,7 +21,7 @@ import gurobipy as gp
 #   C O N S T A N T S   #
 # # # # # # # # # # # # #
 
-U_MIN = 1 * 10 ** (-5)
+U_MIN = 0.0
 MAX_SOLVER_ITERS = 5000
 
 

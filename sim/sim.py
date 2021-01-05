@@ -78,6 +78,12 @@ def main(argv):
 	chrom_dict[('3', 1)] = chpr.ChrmProf(198295559)
 
 	# sub_folder_name = 'n_' + str(n) + '_m_' + str(m) + '_l_' + str(num_mutes)
+	if not os.path.exists(output_folder):
+		os.mkdir(output_folder)
+	readme = open(output_folder + "/README.md", 'w')
+	for key, value in constants_dict.items():
+		readme.write(str(key) + ":" + str(value) + "\n")
+	readme.close()
 	for patient_idx in range(1, 1 + constants_dict['num_patients']):
 		patient_folder_name = 'patient' + str(patient_idx)
 
