@@ -72,6 +72,10 @@ def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_li
 
         prevC = C
 
+    f=open("estimated_objective", 'w')
+    f.write(obj_val)
+    f.close()
+
     return U, C, E, R, W, obj_val, None
 
 
@@ -364,6 +368,33 @@ def _get_objective(mod, F, F_phasing, U, C, R, S, lamb1, lamb2):  # returns expr
     mod.update()
     return gp.quicksum(sums)
 
+
+def _calculate_objective(F, F_phasing, U, C, R, S, lamb1, lamb2):  # returns expression for objective
+    m, L = F_phasing.shape
+    N, _ = C.shape
+    _, l = S.shape
+    sums = []
+    for p in xrange(0, m):
+        for s in xrange(0, L):
+            f_hat = np.sum([U[p, k] * C[k, s] for k in xrange(0, N)])
+            sums.append(np.abs(F_phasing[p, s] - f_hat))
+    for i in xrange(0, N):
+        for j in xrange(0, N):
+            sums.append(lamb1 * R[i, j])
+    for p in xrange(0, m):
+        for b in xrange(0, l):
+            sums.append(lamb2 * S[p, b])
+    return np.sum(sums)
+
+
+def _calculate_S(S, Pi, U, C, Gam):
+    m, l = S.shape
+    N, _, _ = Gam.shape
+    for p in xrange(0, m):
+        for b in xrange(0, l):
+            sg_cpnum_est = np.sum([U[p, k] * (Gam[k, b, 0] + Gam[k, b, 1]) for k in xrange(0, N)])
+            bp_cpnum_est = np.sum([U[p, k] * C[k, b] for k in xrange(0, N)])
+            mod.addConstr(S[p, b] == _get_abs(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
 
 # # # # # # # # # # # # # # # # # # # # # # # # # #
 #   G U R O B I   V A R I A B L E   M A K E R S   #

@@ -58,7 +58,7 @@ def main(argv):
 #  input: num_seg_subsamples (int or None) number of segments to include in deconvolution. these are
 #           in addition to any segments contining an SV as thos are manditory for the SV. None is all segments
 def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, num_processors, time_limit, metadata_fname, num_seg_subsamples, should_overide_lambdas):
-        print("unmix")
+    print("unmix")
 	F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
 	print(F_full,Q,G)
 	Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)

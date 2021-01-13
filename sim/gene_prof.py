@@ -16,6 +16,7 @@ import sys
 import os
 import copy
 import time
+import operator
 
 sys.path.insert(0, 'helper/')
 
@@ -140,8 +141,13 @@ class GeneProf:
 		elif mut_type == 'rem':
 			self.chrom_dict[mut_chr].rem(mut_bgnPos, mut_endPos)
 
-		else:
+		elif mut_type == 'inv':
 			self.chrom_dict[mut_chr].inv(mut_bgnPos, mut_endPos)
+
+		elif mut_type == 'trans':
+			mut_chr2 = random.choice(list(self.chrom_dict.keys()))
+			ins_Pos = random.randint(0, self.chrom_dict[mut_chr2].n)
+			self.chrom_dict[mut_chr2].trans(self.chrom_dict[mut_chr], ins_Pos, mut_bgnPos, mut_endPos)
 
 		self.copy_num_dict = self.get_copy_nums_dict()
 		self.mutCount += 1
@@ -206,36 +212,84 @@ class GeneProf:
 	#                   key: "copy_num", val: copy number of current bp (int)
 	def get_sv_read_nums_dict(self, cov, read_len):  ### xf: generate sv for both alleles separately and then combine them
 		result = dict()
+		others = dict()
 		for (idx, pm) in self.chrom_dict:
+			if pm == 1:
+				continue
 			if idx not in result:
 				temp = dict()
 				# paternal chrom
-				sv_dict_p = self.chrom_dict[(idx, 0)].get_sv_read_nums(cov, read_len)
+				sv_dict_p, others_p = self.chrom_dict[(idx, 0)].get_sv_read_nums(cov, read_len, idx, 0)
+
+				for tup_chr, items in others_p.items():
+					if tup_chr not in others.keys():
+						others[tup_chr] = items
+					else:
+						for (tup_pos, value) in items.items():
+							if tup_pos not in others[tup_chr].keys():
+								others[tup_chr][tup_pos] = value
+							else:
+								others[tup_chr][tup_pos]["mate"] = others_p[tup_chr][tup_pos]["mate"]
+								others[tup_chr][tup_pos]["mated_reads"] += others_p[tup_chr][tup_pos]["mated_reads"]
+								others[tup_chr][tup_pos]["total_reads"] += others_p[tup_chr][tup_pos]["total_reads"]
+								others[tup_chr][tup_pos]["copy_num"] += others_p[tup_chr][tup_pos]["copy_num"]
+
 
 				# maternal chrom
-				sv_dict_m = self.chrom_dict[(idx, 1)].get_sv_read_nums(cov, read_len)
-
+				sv_dict_m, others_m = self.chrom_dict[(idx, 1)].get_sv_read_nums(cov, read_len, idx, 1)
+				for tup_chr, items in others_m.items():
+					if tup_chr not in others.keys():
+						others[tup_chr] = items
+					else:
+						for (tup_pos, value) in items.items():
+							if tup_pos not in others[tup_chr].keys():
+								others[tup_chr][tup_pos] = value
+							else:
+								others[tup_chr][tup_pos]["mate"] = others_m[tup_chr][tup_pos]["mate"]
+								others[tup_chr][tup_pos]["mated_reads"] += others_m[tup_chr][tup_pos]["mated_reads"]
+								others[tup_chr][tup_pos]["total_reads"] += others_m[tup_chr][tup_pos]["total_reads"]
+								others[tup_chr][tup_pos]["copy_num"] += others_m[tup_chr][tup_pos]["copy_num"]
 				# combine paternal and maternal chrom sv dict
 				repeated = set()
-				for (pos, isLeft) in sv_dict_p:
-					if (pos, isLeft) not in sv_dict_m:
-						temp[(pos, isLeft)] = sv_dict_p[(pos, isLeft)]
+				for (pos, isLeft, chr_, pm_) in sv_dict_p:
+					if (pos, isLeft, chr_, 1) not in sv_dict_m:
+						temp[(pos, isLeft, chr_)] = sv_dict_p[(pos, isLeft, chr_, 0)]
+						temp[(pos, isLeft, chr_)]["mate"] = (
+						sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][0], sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][1],
+						sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][2])
 					else:
-						repeated.add((pos, isLeft))
-						if sv_dict_p[(pos, isLeft)]["mate"] == sv_dict_m[(pos, isLeft)]["mate"]:
-							temp[(pos, isLeft)]["mate"] = sv_dict_p[(pos, isLeft)]["mate"]
-							temp[(pos, isLeft)]["mated_reads"] = sv_dict_p[(pos, isLeft)]["mated_reads"] + sv_dict_m[(pos, isLeft)]["mated_reads"]
-							temp[(pos, isLeft)]["total_reads"] = sv_dict_p[(pos, isLeft)]["total_reads"] + sv_dict_m[(pos, isLeft)]["total_reads"]
-							temp[(pos, isLeft)]["copy_num"] = sv_dict_p[(pos, isLeft)]["copy_num"] * 0.5 + sv_dict_m[(pos, isLeft)]["copy_num"] * 0.5
+						repeated.add((pos, isLeft, chr_))
+						if sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][:3] == sv_dict_m[(pos, isLeft, chr_, 1)]["mate"][:3]:
+							temp[(pos, isLeft, chr_)]["mate"] = (sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][0], sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][1],
+																 sv_dict_p[(pos, isLeft, chr_, 0)]["mate"][2])
+							temp[(pos, isLeft, chr_)]["mated_reads"] = sv_dict_p[(pos, isLeft, chr_, 0)]["mated_reads"] + sv_dict_m[(pos, isLeft, chr_, 1)]["mated_reads"]
+							temp[(pos, isLeft, chr_)]["total_reads"] = sv_dict_p[(pos, isLeft, chr_, 0)]["total_reads"] + sv_dict_m[(pos, isLeft, chr_, 1)]["total_reads"]
+							temp[(pos, isLeft, chr_)]["copy_num"] = sv_dict_p[(pos, isLeft, chr_, 0)]["copy_num"] + sv_dict_m[(pos, isLeft, chr_, 1)]["copy_num"]
+							###xf: change the relative copy number (?) to total copy number
 						else:
 							print "\n"
 							print 'Different mate bp in pair of chromosomes!!!'
-							print (pos, isLeft), sv_dict_p[(pos, isLeft)]["mate"], sv_dict_m[(pos, isLeft)]["mate"]
+							print (pos, isLeft, chr_, pm_), sv_dict_p[(pos, isLeft, chr_, 0)]["mate"], sv_dict_m[(pos, isLeft, chr_, 1)]["mate"]
 							print "\n"
-				for (pos, isLeft) in sv_dict_m:
-					if (pos, isLeft) not in repeated:
-						temp[(pos, isLeft)] = sv_dict_m[(pos, isLeft)]
+				for (pos, isLeft, chr_, pm_) in sv_dict_m:
+					if (pos, isLeft, chr_) not in repeated:
+						temp[(pos, isLeft, chr_)] = sv_dict_m[(pos, isLeft, chr_, 1)]
+						temp[(pos, isLeft, chr_)]["mate"] = (sv_dict_m[(pos, isLeft, chr_, 1)]["mate"][0], sv_dict_m[(pos, isLeft, chr_, 1)]["mate"][1],
+															 sv_dict_m[(pos, isLeft, chr_, 1)]["mate"][2])
 				result[idx] = temp
+		for (chr, pm) in others.keys():
+			for (pos, isLeft, chr_, pm_) in others[(chr, pm)]:
+				assert chr_ == chr
+				assert pm_ == pm
+				if (pos, isLeft, chr) in result[chr].keys():
+					if result[chr][(pos, isLeft, chr)]["mate"] == others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mated"][0:3]:
+						result[chr][(pos, isLeft, chr)]["mated_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mated_reads"]
+						result[chr][(pos, isLeft, chr)]["total_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["total_reads"]
+						result[chr][(pos, isLeft, chr)]["copy_num"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["copy_num"]
+				else:
+					result[chr][(pos, isLeft, chr)] = others[(chr, pm)][(pos, isLeft, chr_, pm_)]
+					result[chr][(pos, isLeft, chr)]["mate"] = (others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0],
+						others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][1], others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][2])
 		return result
 
 

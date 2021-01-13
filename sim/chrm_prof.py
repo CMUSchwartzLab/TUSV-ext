@@ -23,10 +23,12 @@ def printerr(s):
 
 class ChrmProf:  ### xf: the profile specifically for one chromosome (allele specific)
 	# n (length of chromosome)
-	def __init__(self, n):
+	def __init__(self, n, chromosome, pm):
 		self.n = n
-		self.org = _OrgNode(0, n - 1)
-		self.mut = _MutNode(0, n - 1)
+		self.chrm = chromosome
+		self.pm = pm
+		self.org = _OrgNode(0, n - 1, chromosome, pm)
+		self.mut = _MutNode(0, n - 1, chromosome, pm)
 		self.org.children.append(self.mut)
 		self.mut.parent = self.org
 
@@ -43,13 +45,14 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			cur = cur.r
 		return bgns, ends, cps
 
-	def get_sv_read_nums(self, cov, read_len):
+	def get_sv_read_nums(self, cov, read_len, chrm, pm):
 		n = self.n
 		svs = {}
+		others = {}
 		cur = self.mut
 		while cur != None:  ###xf: go through along the chromosome
-			_add_sv_to_dict(svs, cur, True)
-			_add_sv_to_dict(svs, cur, False)
+			_add_sv_to_dict(svs, others, cur, True, chrm, pm)
+			_add_sv_to_dict(svs, others, cur, False, chrm, pm)
 			cur = cur.r
 		# remove any splits that are not actually breakpoints
 		keys_to_remove = []
@@ -59,12 +62,12 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		for k in keys_to_remove:
 			del svs[k]
 		# add breakpoint copy numbers
-		_append_bp_copy_num(svs, self.mut)
+		_append_bp_copy_num(svs, others, self.mut)
 
-		return svs
+		return svs, others
 
 	def deepcopy(self):
-		c = ChrmProf(self.n)
+		c = ChrmProf(self.n, self.chrm, self.pm)
 		c.org, muts = _deepcopy_org(self.org)
 		muts = sorted(muts, key = lambda x: x.bgn)
 		n = len(muts)
@@ -120,6 +123,63 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			cur = cur.r
 
 		self.n = self.n - (end - bgn + 1)
+		return True
+
+	###xf: add translocation
+	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1):
+		if not from_ChrmProf._is_in_bounds(bgn1, end1) or not from_ChrmProf._is_splitable(bgn1, end1):
+			return False
+		from_ChrmProf._2split(bgn1, end1) # split mutated and original list nodes at bgn and end positions
+
+		insR, head, tail = _copy_from_to(from_ChrmProf.mut, bgn1, end1) ### xf: copied head and tail
+
+		head_, tail_ = _get_head_tail(from_ChrmProf.mut, bgn1, end1) ### xf: original head and tail, to be removed in above codes
+
+		newL_ = head_.l
+		newR_ = tail_.r
+
+		if newL_ == None:
+			from_ChrmProf.mut = newR_ # change the head of the mut list to right of tail if we are removing head -> tail
+		if newL_ != None:
+			newL_.r = newR_
+		if newR_ != None:
+			newR_.l = newL_
+		head_.l = None  ### xf: detach the removed segment MutNode
+		tail_.r = None
+
+		# remove old nodes from OrgNode children list and delete old nodes
+		while head_ != None:
+			head_.parent.children.remove(head_) # remove curent MutNode from children list of OrgNode
+			prev = head_
+			head_ = head_.r
+			del prev
+
+		### xf: remove segment finished, start translocation to the new position in current chromosome
+		self._split(ins_Pos)
+		ins_head = _get_head_ins(self.mut, ins_Pos)
+		newL = ins_head.l  ### xf: copy from amp()
+		newR = ins_head
+		head.l = newL
+		tail.r = newR
+		if newR != None:
+			newR.l = tail
+		if newL != None:
+			newL.r = head
+		# increment bgn and end values for inserted region and segments to right
+		seg_diff = ins_Pos - bgn1
+		while True:
+			head.bgn += seg_diff
+			head.end += seg_diff
+			if head == tail:
+				break
+			head = head.r
+		head = head.r
+		seg_len = end1 - bgn1 + 1
+		while head != None:
+			head.bgn += seg_len
+			head.end += seg_len
+			head = head.r
+		self.n = self.n + (end1 - bgn1 + 1)
 		return True
 
 	# duplicate region from bgn to end. returns boolean for complete or not
@@ -274,17 +334,19 @@ class _Node:
 
 
 class _OrgNode(_Node): ### xf: OrgNode is a single node which will be splitted during mutation. It will be linked to multiple MutNodes for mapping.
-	def __init__(self, bgn, end):
+	def __init__(self, bgn, end, chromosome, pm):
 		self.children = [] # no mutated sections
 		self.l = None      # no left or right pointers
 		self.r = None
 		self.bgn = bgn
 		self.end = end
+		self.chrm = chromosome
+		self.pm = pm
 
 	# returns pointer to new sibling on right. k (int) means k + self.begin is bgn of new sibling
 	def split(self, k):
 		r = self.r
-		self.r = _OrgNode(self.bgn + k, self.end)
+		self.r = _OrgNode(self.bgn + k, self.end, self.chrm, self.pm)
 		self.r.r = r    # set right of new node to the old node's old right
 		self.r.l = self # set left of new node to old node (self)
 		if r != None:
@@ -293,24 +355,26 @@ class _OrgNode(_Node): ### xf: OrgNode is a single node which will be splitted d
 		return self.r
 
 	def copy(self):
-		return _OrgNode(self.bgn, self.end)
+		return _OrgNode(self.bgn, self.end, self.chrm, self.pm)
 
 class _MutNode(_Node):
-	def __init__(self, bgn, end, is_inv = False):
+	def __init__(self, bgn, end, chromosome, pm, is_inv = False):
 		self.parent = None
 		self.l = None
 		self.r = None
 		self.bgn = bgn
 		self.end = end
 		self.is_inv = is_inv
+		self.chrm = chromosome
+		self.pm = pm
 
 	def copy(self):
-		return _MutNode(self.bgn, self.end, self.is_inv)
+		return _MutNode(self.bgn, self.end, self.chrm, self.pm, self.is_inv)
 
 	# returns pointer to new sibling on right. k (int) means k + self.begin is bgn of new sibling
 	def split(self, k):
 		r = self.r
-		self.r = _MutNode(self.bgn + k, self.end, self.is_inv)
+		self.r = _MutNode(self.bgn + k, self.end, self.chrm, self.pm, self.is_inv)
 		self.r.r = r    # set right of new node to the old node's old right
 		self.r.l = self # set left of new node to old node (self)
 		if r != None:
@@ -334,6 +398,12 @@ def _get_head_tail(cur, bgn, end):
 		cur = cur.r
 	tail = cur
 	return head, tail
+
+def _get_head_ins(cur, insPos):
+	while cur != None and cur.bgn != insPos:
+		cur = cur.r
+	head = cur
+	return head
 
 # cur (mutNode). returns True if bgn is already in mutNode list
 def _is_already_mut_bgn(cur, bgn):
@@ -417,23 +487,23 @@ def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
 		mate = cur.l
 
 	if mate == None:
-		return None, None, None
+		return None, None, None, None, None
 
-	curPos = _get_org_pos(cur, isBgn)
-	matePos = _get_org_pos(mate, not isBgn)
+	curPos, curOrgNode = _get_org_pos(cur, isBgn)
+	matePos, mateOrgNode = _get_org_pos(mate, not isBgn)
 
 	isLeft = mate.parent.end == matePos
-	isAdj = abs(curPos - matePos) == 1
+	isAdj = (abs(curPos - matePos) == 1 and curOrgNode.chrm == mateOrgNode.chrm and curOrgNode.pm == mateOrgNode.chrm)
 
-	return matePos, isLeft, isAdj
+	return matePos, isLeft, isAdj, mateOrgNode.chrm, mateOrgNode.pm
 
 # node (MuteNode), isBgn (bool) True if considering left pos on mutant. returns position of org node
 def _get_org_pos(node, isBgn):
 	if node.is_inv:
 		isBgn = not isBgn
 	if isBgn:
-		return node.parent.bgn
-	return node.parent.end
+		return node.parent.bgn, node
+	return node.parent.end, node
 
 def _get_cur_pos(cur, isBgn):
 	oCur = cur.parent
@@ -441,53 +511,88 @@ def _get_cur_pos(cur, isBgn):
 	if cur.is_inv:
 		isLeft = not isLeft
 	if isLeft:
-		return oCur.end, isLeft
-	return oCur.bgn, isLeft
+		return oCur.end, isLeft, oCur.chrm, oCur.pm
+	return oCur.bgn, isLeft, oCur.chrm, oCur.pm
 
 
-def _add_sv_to_dict(svs, cur, isBgn):
-	matePos, mateIsLeft, isAdj = _get_mated_pos(cur, isBgn)   ### xf: mate | cur
-	curPos, curIsLeft = _get_cur_pos(cur, isBgn)
+def _add_sv_to_dict(svs, others, cur, isBgn, chrm, pm):
+	matePos, mateIsLeft, isAdj, mateChrm, matePM = _get_mated_pos(cur, isBgn)   ### xf: mate | cur
+	curPos, curIsLeft, curChrm, curPM = _get_cur_pos(cur, isBgn)
 	if matePos is None:
 		return
 
-	curTup = (curPos, curIsLeft)
-	mateTup = (matePos, mateIsLeft)
+	curTup = (curPos, curIsLeft, curChrm, curPM)
+	mateTup = (matePos, mateIsLeft, mateChrm, matePM)
 
 	
 	if curTup not in svs:
-		svs[curTup] = {'total_reads': 0, 'mated_reads': 0}
+		if curChrm == chrm and curPM == pm:
+			svs[curTup] = {'total_reads': 0, 'mated_reads': 0}
+		else:
+			if (curChrm, curPM) in others.keys():
+				others[(curChrm, curPM)][curTup] = {'total_reads': 0, 'mated_reads': 0}
+			else:
+				others[(curChrm, curPM)] = {}
+				others[(curChrm, curPM)][curTup] = {'total_reads': 0, 'mated_reads': 0}
 
 	if mateTup not in svs:
-		svs[mateTup] = {'total_reads': 0, 'mated_reads': 0}
+		if mateChrm == chrm and matePM == pm:
+			svs[mateTup] = {'total_reads': 0, 'mated_reads': 0}
+		else:
+			if (mateChrm, matePM) in others.keys():
+				others[(mateChrm, matePM)][mateTup] = {'total_reads': 0, 'mated_reads': 0}
+			else:
+				others[(mateChrm, matePM)] = {}
+				others[(mateChrm, matePM)][mateTup] = {'total_reads': 0, 'mated_reads': 0}
 
-	svs[curTup]['total_reads'] += 1
+	if curChrm == chrm and curPM == pm:
+		svs[curTup]['total_reads'] += 1
+		if not isAdj:  ### xf: not include normal adjacent pairs (need to adjust if we include SNVs)
+			svs[curTup]['mated_reads'] += 1
+			svs[curTup]['mate'] = mateTup
+			if mateChrm == chrm and matePM == pm:
+				svs[mateTup]['mate'] = curTup
+			else:
+				others[(mateChrm, matePM)][mateTup]['mate'] = curTup
+	else:
+		others[(curChrm, curPM)][curTup]['total_reads'] += 1
+		if not isAdj: ### xf: not include normal adjacent pairs (need to adjust if we include SNVs)
+			others[(curChrm, curPM)][curTup]['mated_reads'] += 1
+			others[(curChrm, curPM)][curTup]['mate'] = mateTup
+			if mateChrm == chrm and matePM == pm:
+				svs[mateTup]['mate'] = curTup
+			else:
+				others[(mateChrm, matePM)][mateTup]['mate'] = curTup
 
-	if not isAdj: ### xf: not include normal adjacent pairs (need to adjust if we include SNVs)
-		svs[curTup]['mated_reads'] += 1
-		svs[curTup]['mate'] = mateTup
-		svs[mateTup]['mate'] = curTup
 
-
-def _append_bp_copy_num(svs, mut_head):
+def _append_bp_copy_num(svs, others, mut_head):
 	cur = mut_head
 	while cur != None:
 		for isBgn in [True, False]:
-			curPos, curIsLeft = _get_cur_pos(cur, isBgn)
-			matPos, matIsLeft, _ = _get_mated_pos(cur, isBgn)
-			curTup = (curPos, curIsLeft)
-			matTup = (matPos, matIsLeft)
+			curPos, curIsLeft, curChrm, curPM = _get_cur_pos(cur, isBgn)
+			matPos, matIsLeft, _, mateChrm, matePM = _get_mated_pos(cur, isBgn)
+			curTup = (curPos, curIsLeft, curChrm, curPM)
+			matTup = (matPos, matIsLeft, mateChrm, matePM)
 			if curTup in svs and svs[curTup]['mate'] == matTup:
 				if 'copy_num' not in svs[curTup]:
 					svs[curTup]['copy_num'] = 0
 				svs[curTup]['copy_num'] += 1
+			elif (curChrm, curPM) in others.keys():
+				if curTup in others[(curChrm, curPM)] and others[(curChrm, curPM)][curTup]['mate'] == matTup:
+					if 'copy_num' not in others[(curChrm, curPM)][curTup]:
+						others[(curChrm, curPM)][curTup]['copy_num'] = 0
+					others[(curChrm, curPM)][curTup]['copy_num'] += 1
 		cur = cur.r
 
 	# add copy number of zeros for breakpoints that were deleted
 	for tup, val in svs.iteritems():
 		if 'copy_num' not in val:
 			svs[tup]['copy_num'] = 0
-
+	for others_chr in others.values():
+		for tup, val in others_chr.iteritems():
+			if 'copy_num' not in val:
+				others_chr[tup]['copy_num'] = 0
+	#print("svs after", svs, "others after", others)
 #
 #   DEEP COPY
 #

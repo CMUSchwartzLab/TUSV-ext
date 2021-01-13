@@ -1,0 +1,379 @@
+#
+# There is insufficient memory for the Java Runtime Environment to continue.
+# Native memory allocation (mmap) failed to map 524288000 bytes for committing reserved memory.
+# Possible reasons:
+#   The system is out of physical RAM or swap space
+#   The process is running with CompressedOops enabled, and the Java Heap may be blocking the growth of the native heap
+# Possible solutions:
+#   Reduce memory load on the system
+#   Increase physical memory or swap space
+#   Check if swap backing store is full
+#   Decrease Java heap size (-Xmx/-Xms)
+#   Decrease number of Java threads
+#   Decrease Java thread stack sizes (-Xss)
+#   Set larger code cache with -XX:ReservedCodeCacheSize=
+# This output file may be truncated or incomplete.
+#
+#  Out of Memory Error (os_linux.cpp:2830), pid=30703, tid=30704
+#
+# JRE version:  (11.0.5+10) (build )
+# Java VM: OpenJDK 64-Bit Server VM (11.0.5+10-b520.38, mixed mode, aot, sharing, tiered, compressed oops, g1 gc, linux-amd64)
+# Core dump will be written. Default location: Core dumps may be processed with "/lib/systemd/systemd-coredump %P %u %g %s %t 9223372036854775808 %e" (or dumping to /home/cindyfu/Documents/tusv_extension/core.30703)
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: org.jetbrains.git4idea.http.GitAskPassApp Username for 'https://github.com': 
+
+Host: Intel(R) Core(TM) i9-9900 CPU @ 3.10GHz, 16 cores, 31G, Linux Mint 19.3 Tricia
+Time: Wed Jan  6 11:34:50 2021 EST elapsed time: 0 seconds (0d 0h 0m 0s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007fb0d4015000):  JavaThread "Unknown thread" [_thread_in_vm, id=30704, stack(0x00007fb0dcf20000,0x00007fb0dd021000)]
+
+Stack: [0x00007fb0dcf20000,0x00007fb0dd021000],  sp=0x00007fb0dd01f230,  free space=1020k
+Native frames: (J=compiled Java code, A=aot compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [libjvm.so+0xd9edfa]  VMError::report_and_die(int, char const*, char const*, __va_list_tag*, Thread*, unsigned char*, void*, void*, char const*, int, unsigned long)+0x18a
+V  [libjvm.so+0xd9fc93]  VMError::report_and_die(Thread*, char const*, int, unsigned long, VMErrorType, char const*, __va_list_tag*)+0x43
+V  [libjvm.so+0x697ae8]  report_vm_out_of_memory(char const*, int, unsigned long, VMErrorType, char const*, ...)+0xe8
+V  [libjvm.so+0xba5539]  os::pd_commit_memory_or_exit(char*, unsigned long, unsigned long, bool, char const*)+0xe9
+V  [libjvm.so+0xb9d46d]  os::commit_memory_or_exit(char*, unsigned long, unsigned long, bool, char const*)+0x1d
+V  [libjvm.so+0x79f2a1]  G1PageBasedVirtualSpace::commit_preferred_pages(unsigned long, unsigned long)+0x71
+V  [libjvm.so+0x79f3f5]  G1PageBasedVirtualSpace::commit_internal(unsigned long, unsigned long)+0x85
+V  [libjvm.so+0x79f5ea]  G1PageBasedVirtualSpace::commit(unsigned long, unsigned long)+0x10a
+V  [libjvm.so+0x7a6e86]  G1RegionsLargerThanCommitSizeMapper::commit_regions(unsigned int, unsigned long, WorkGang*)+0x46
+V  [libjvm.so+0x80fe08]  HeapRegionManager::commit_regions(unsigned int, unsigned long, WorkGang*)+0x88
+V  [libjvm.so+0x810964]  HeapRegionManager::make_regions_available(unsigned int, unsigned int, WorkGang*)+0x34
+V  [libjvm.so+0x810e69]  HeapRegionManager::expand_by(unsigned int, WorkGang*)+0x79
+V  [libjvm.so+0x762c60]  G1CollectedHeap::expand(unsigned long, WorkGang*, double*)+0xc0
+V  [libjvm.so+0x763355]  G1CollectedHeap::initialize()+0x695
+V  [libjvm.so+0xd62501]  Universe::initialize_heap()+0x41
+V  [libjvm.so+0xd627b1]  universe_init()+0x41
+V  [libjvm.so+0x82dadf]  init_globals()+0x5f
+V  [libjvm.so+0xd394d4]  Threads::create_vm(JavaVMInitArgs*, bool*)+0x314
+V  [libjvm.so+0x8d5006]  JNI_CreateJavaVM+0x56
+C  [libjli.so+0x4814]  JavaMain+0x84
+
+
+---------------  P R O C E S S  ---------------
+
+Threads class SMR info:
+_java_thread_list=0x0000000001662220, length=0, elements={
+}
+
+Java Threads: ( => current thread )
+
+Other Threads:
+  0x00007fb0d402e800 GCTaskThread "GC Thread#0" [stack: 0x00007fb0d8f2b000,0x00007fb0d902b000] [id=30705]
+  0x00007fb0d4069000 ConcurrentGCThread "G1 Main Marker" [stack: 0x00007fb0c0e46000,0x00007fb0c0f46000] [id=30706]
+  0x00007fb0d406b000 ConcurrentGCThread "G1 Conc#0" [stack: 0x00007fb0c0d44000,0x00007fb0c0e44000] [id=30707]
+
+[error occurred during error reporting (printing all threads), id 0xb, SIGSEGV (0xb) at pc=0x00007fb0db54cfd5]
+
+VM state:not at safepoint (not fully initialized)
+
+VM Mutex/Monitor currently owned by a thread:  ([mutex/lock_event])
+[0x00007fb0d4011c40] Heap_lock - owner thread: 0x00007fb0d4015000
+
+Heap address: 0x000000060c000000, size: 8000 MB, Compressed Oops mode: Non-zero based: 0x000000060c000000
+Narrow klass base: 0x0000000000000000, Narrow klass shift: 0
+
+GC Heap History (0 events):
+No events
+
+Deoptimization events (0 events):
+No events
+
+Classes redefined (0 events):
+No events
+
+Internal exceptions (0 events):
+No events
+
+Events (1 events):
+Event: 0.011 Protecting memory [0x00007fb0dcf20000,0x00007fb0dcf24000] with protection modes 0
+
+
+Dynamic libraries:
+00400000-00401000 r-xp 00000000 103:06 4065735                           /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/bin/java
+00601000-00602000 r--p 00001000 103:06 4065735                           /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/bin/java
+00602000-00603000 rw-p 00002000 103:06 4065735                           /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/bin/java
+0164a000-0166b000 rw-p 00000000 00:00 0                                  [heap]
+62b400000-800000000 ---p 00000000 00:00 0 
+7fb09c000000-7fb09c021000 rw-p 00000000 00:00 0 
+7fb09c021000-7fb0a0000000 ---p 00000000 00:00 0 
+7fb0a2000000-7fb0a4000000 rw-p 00000000 00:00 0 
+7fb0a4000000-7fb0a4021000 rw-p 00000000 00:00 0 
+7fb0a4021000-7fb0a8000000 ---p 00000000 00:00 0 
+7fb0a9399000-7fb0a9720000 rw-p 00000000 00:00 0 
+7fb0a9720000-7fb0bc000000 ---p 00000000 00:00 0 
+7fb0bc000000-7fb0bc021000 rw-p 00000000 00:00 0 
+7fb0bc021000-7fb0c0000000 ---p 00000000 00:00 0 
+7fb0c0035000-7fb0c0d42000 rw-p 00000000 00:00 0 
+7fb0c0d42000-7fb0c0d43000 ---p 00000000 00:00 0 
+7fb0c0d43000-7fb0c0e44000 rw-p 00000000 00:00 0 
+7fb0c0e44000-7fb0c0e45000 ---p 00000000 00:00 0 
+7fb0c0e45000-7fb0c0f46000 rw-p 00000000 00:00 0 
+7fb0c0f46000-7fb0c11b6000 rwxp 00000000 00:00 0 
+7fb0c11b6000-7fb0c1685000 ---p 00000000 00:00 0 
+7fb0c1685000-7fb0c18f5000 rwxp 00000000 00:00 0 
+7fb0c18f5000-7fb0c8ae5000 ---p 00000000 00:00 0 
+7fb0c8ae5000-7fb0c8d55000 rwxp 00000000 00:00 0 
+7fb0c8d55000-7fb0cff46000 ---p 00000000 00:00 0 
+7fb0cff46000-7fb0d4000000 r--s 00000000 103:06 4197371                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/modules
+7fb0d4000000-7fb0d40ae000 rw-p 00000000 00:00 0 
+7fb0d40ae000-7fb0d8000000 ---p 00000000 00:00 0 
+7fb0d809d000-7fb0d8f29000 rw-p 00000000 00:00 0 
+7fb0d8f29000-7fb0d8f2a000 ---p 00000000 00:00 0 
+7fb0d8f2a000-7fb0d9030000 rw-p 00000000 00:00 0 
+7fb0d9030000-7fb0d9114000 ---p 00000000 00:00 0 
+7fb0d9114000-7fb0d9119000 rw-p 00000000 00:00 0 
+7fb0d9119000-7fb0d91fd000 ---p 00000000 00:00 0 
+7fb0d91fd000-7fb0d9202000 r-xp 00000000 103:06 4197349                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjimage.so
+7fb0d9202000-7fb0d9402000 ---p 00005000 103:06 4197349                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjimage.so
+7fb0d9402000-7fb0d9403000 r--p 00005000 103:06 4197349                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjimage.so
+7fb0d9403000-7fb0d9404000 rw-p 00006000 103:06 4197349                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjimage.so
+7fb0d9404000-7fb0d940b000 r-xp 00000000 103:06 4197370                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libzip.so
+7fb0d940b000-7fb0d960a000 ---p 00007000 103:06 4197370                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libzip.so
+7fb0d960a000-7fb0d960b000 r--p 00006000 103:06 4197370                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libzip.so
+7fb0d960b000-7fb0d960c000 rw-p 00007000 103:06 4197370                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libzip.so
+7fb0d960c000-7fb0d9617000 r-xp 00000000 103:05 1314356                   /lib/x86_64-linux-gnu/libnss_files-2.27.so
+7fb0d9617000-7fb0d9816000 ---p 0000b000 103:05 1314356                   /lib/x86_64-linux-gnu/libnss_files-2.27.so
+7fb0d9816000-7fb0d9817000 r--p 0000a000 103:05 1314356                   /lib/x86_64-linux-gnu/libnss_files-2.27.so
+7fb0d9817000-7fb0d9818000 rw-p 0000b000 103:05 1314356                   /lib/x86_64-linux-gnu/libnss_files-2.27.so
+7fb0d9818000-7fb0d981e000 rw-p 00000000 00:00 0 
+7fb0d981e000-7fb0d9835000 r-xp 00000000 103:05 1314350                   /lib/x86_64-linux-gnu/libnsl-2.27.so
+7fb0d9835000-7fb0d9a34000 ---p 00017000 103:05 1314350                   /lib/x86_64-linux-gnu/libnsl-2.27.so
+7fb0d9a34000-7fb0d9a35000 r--p 00016000 103:05 1314350                   /lib/x86_64-linux-gnu/libnsl-2.27.so
+7fb0d9a35000-7fb0d9a36000 rw-p 00017000 103:05 1314350                   /lib/x86_64-linux-gnu/libnsl-2.27.so
+7fb0d9a36000-7fb0d9a38000 rw-p 00000000 00:00 0 
+7fb0d9a38000-7fb0d9a43000 r-xp 00000000 103:05 1314367                   /lib/x86_64-linux-gnu/libnss_nis-2.27.so
+7fb0d9a43000-7fb0d9c42000 ---p 0000b000 103:05 1314367                   /lib/x86_64-linux-gnu/libnss_nis-2.27.so
+7fb0d9c42000-7fb0d9c43000 r--p 0000a000 103:05 1314367                   /lib/x86_64-linux-gnu/libnss_nis-2.27.so
+7fb0d9c43000-7fb0d9c44000 rw-p 0000b000 103:05 1314367                   /lib/x86_64-linux-gnu/libnss_nis-2.27.so
+7fb0d9c44000-7fb0d9c4c000 r-xp 00000000 103:05 1314352                   /lib/x86_64-linux-gnu/libnss_compat-2.27.so
+7fb0d9c4c000-7fb0d9e4c000 ---p 00008000 103:05 1314352                   /lib/x86_64-linux-gnu/libnss_compat-2.27.so
+7fb0d9e4c000-7fb0d9e4d000 r--p 00008000 103:05 1314352                   /lib/x86_64-linux-gnu/libnss_compat-2.27.so
+7fb0d9e4d000-7fb0d9e4e000 rw-p 00009000 103:05 1314352                   /lib/x86_64-linux-gnu/libnss_compat-2.27.so
+7fb0d9e4e000-7fb0d9e77000 r-xp 00000000 103:06 4197339                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjava.so
+7fb0d9e77000-7fb0da076000 ---p 00029000 103:06 4197339                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjava.so
+7fb0da076000-7fb0da077000 r--p 00028000 103:06 4197339                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjava.so
+7fb0da077000-7fb0da079000 rw-p 00029000 103:06 4197339                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libjava.so
+7fb0da079000-7fb0da086000 r-xp 00000000 103:06 4197369                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libverify.so
+7fb0da086000-7fb0da285000 ---p 0000d000 103:06 4197369                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libverify.so
+7fb0da285000-7fb0da287000 r--p 0000c000 103:06 4197369                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libverify.so
+7fb0da287000-7fb0da288000 rw-p 0000e000 103:06 4197369                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/libverify.so
+7fb0da288000-7fb0da28f000 r-xp 00000000 103:05 1314407                   /lib/x86_64-linux-gnu/librt-2.27.so
+7fb0da28f000-7fb0da48e000 ---p 00007000 103:05 1314407                   /lib/x86_64-linux-gnu/librt-2.27.so
+7fb0da48e000-7fb0da48f000 r--p 00006000 103:05 1314407                   /lib/x86_64-linux-gnu/librt-2.27.so
+7fb0da48f000-7fb0da490000 rw-p 00007000 103:05 1314407                   /lib/x86_64-linux-gnu/librt-2.27.so
+7fb0da490000-7fb0da4a7000 r-xp 00000000 103:05 1314053                   /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fb0da4a7000-7fb0da6a6000 ---p 00017000 103:05 1314053                   /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fb0da6a6000-7fb0da6a7000 r--p 00016000 103:05 1314053                   /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fb0da6a7000-7fb0da6a8000 rw-p 00017000 103:05 1314053                   /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fb0da6a8000-7fb0da845000 r-xp 00000000 103:05 1314329                   /lib/x86_64-linux-gnu/libm-2.27.so
+7fb0da845000-7fb0daa44000 ---p 0019d000 103:05 1314329                   /lib/x86_64-linux-gnu/libm-2.27.so
+7fb0daa44000-7fb0daa45000 r--p 0019c000 103:05 1314329                   /lib/x86_64-linux-gnu/libm-2.27.so
+7fb0daa45000-7fb0daa46000 rw-p 0019d000 103:05 1314329                   /lib/x86_64-linux-gnu/libm-2.27.so
+7fb0daa46000-7fb0dabbf000 r-xp 00000000 103:05 1186312                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25
+7fb0dabbf000-7fb0dadbf000 ---p 00179000 103:05 1186312                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25
+7fb0dadbf000-7fb0dadc9000 r--p 00179000 103:05 1186312                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25
+7fb0dadc9000-7fb0dadcb000 rw-p 00183000 103:05 1186312                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25
+7fb0dadcb000-7fb0dadcf000 rw-p 00000000 00:00 0 
+7fb0dadcf000-7fb0dbe80000 r-xp 00000000 103:06 4197382                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/server/libjvm.so
+7fb0dbe80000-7fb0dc080000 ---p 010b1000 103:06 4197382                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/server/libjvm.so
+7fb0dc080000-7fb0dc14e000 r--p 010b1000 103:06 4197382                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/server/libjvm.so
+7fb0dc14e000-7fb0dc188000 rw-p 0117f000 103:06 4197382                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/server/libjvm.so
+7fb0dc188000-7fb0dc1e1000 rw-p 00000000 00:00 0 
+7fb0dc1e1000-7fb0dc3c8000 r-xp 00000000 103:05 1314266                   /lib/x86_64-linux-gnu/libc-2.27.so
+7fb0dc3c8000-7fb0dc5c8000 ---p 001e7000 103:05 1314266                   /lib/x86_64-linux-gnu/libc-2.27.so
+7fb0dc5c8000-7fb0dc5cc000 r--p 001e7000 103:05 1314266                   /lib/x86_64-linux-gnu/libc-2.27.so
+7fb0dc5cc000-7fb0dc5ce000 rw-p 001eb000 103:05 1314266                   /lib/x86_64-linux-gnu/libc-2.27.so
+7fb0dc5ce000-7fb0dc5d2000 rw-p 00000000 00:00 0 
+7fb0dc5d2000-7fb0dc5d5000 r-xp 00000000 103:05 1314289                   /lib/x86_64-linux-gnu/libdl-2.27.so
+7fb0dc5d5000-7fb0dc7d4000 ---p 00003000 103:05 1314289                   /lib/x86_64-linux-gnu/libdl-2.27.so
+7fb0dc7d4000-7fb0dc7d5000 r--p 00002000 103:05 1314289                   /lib/x86_64-linux-gnu/libdl-2.27.so
+7fb0dc7d5000-7fb0dc7d6000 rw-p 00003000 103:05 1314289                   /lib/x86_64-linux-gnu/libdl-2.27.so
+7fb0dc7d6000-7fb0dc7e5000 r-xp 00000000 103:06 4197316                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/jli/libjli.so
+7fb0dc7e5000-7fb0dc9e4000 ---p 0000f000 103:06 4197316                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/jli/libjli.so
+7fb0dc9e4000-7fb0dc9e5000 r--p 0000e000 103:06 4197316                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/jli/libjli.so
+7fb0dc9e5000-7fb0dc9e6000 rw-p 0000f000 103:06 4197316                   /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/jbr/lib/jli/libjli.so
+7fb0dc9e6000-7fb0dca00000 r-xp 00000000 103:05 1314399                   /lib/x86_64-linux-gnu/libpthread-2.27.so
+7fb0dca00000-7fb0dcbff000 ---p 0001a000 103:05 1314399                   /lib/x86_64-linux-gnu/libpthread-2.27.so
+7fb0dcbff000-7fb0dcc00000 r--p 00019000 103:05 1314399                   /lib/x86_64-linux-gnu/libpthread-2.27.so
+7fb0dcc00000-7fb0dcc01000 rw-p 0001a000 103:05 1314399                   /lib/x86_64-linux-gnu/libpthread-2.27.so
+7fb0dcc01000-7fb0dcc05000 rw-p 00000000 00:00 0 
+7fb0dcc05000-7fb0dcc21000 r-xp 00000000 103:05 1314440                   /lib/x86_64-linux-gnu/libz.so.1.2.11
+7fb0dcc21000-7fb0dce20000 ---p 0001c000 103:05 1314440                   /lib/x86_64-linux-gnu/libz.so.1.2.11
+7fb0dce20000-7fb0dce21000 r--p 0001b000 103:05 1314440                   /lib/x86_64-linux-gnu/libz.so.1.2.11
+7fb0dce21000-7fb0dce22000 rw-p 0001c000 103:05 1314440                   /lib/x86_64-linux-gnu/libz.so.1.2.11
+7fb0dce22000-7fb0dce49000 r-xp 00000000 103:05 1314238                   /lib/x86_64-linux-gnu/ld-2.27.so
+7fb0dcee1000-7fb0dcf20000 rw-p 00000000 00:00 0 
+7fb0dcf20000-7fb0dcf24000 ---p 00000000 00:00 0 
+7fb0dcf24000-7fb0dd023000 rw-p 00000000 00:00 0 
+7fb0dd02e000-7fb0dd033000 rw-p 00000000 00:00 0 
+7fb0dd033000-7fb0dd03d000 ---p 00000000 00:00 0 
+7fb0dd03d000-7fb0dd045000 rw-s 00000000 103:05 1052181                   /tmp/hsperfdata_cindyfu/30703
+7fb0dd045000-7fb0dd046000 ---p 00000000 00:00 0 
+7fb0dd046000-7fb0dd047000 r--p 00000000 00:00 0 
+7fb0dd047000-7fb0dd049000 rw-p 00000000 00:00 0 
+7fb0dd049000-7fb0dd04a000 r--p 00027000 103:05 1314238                   /lib/x86_64-linux-gnu/ld-2.27.so
+7fb0dd04a000-7fb0dd04b000 rw-p 00028000 103:05 1314238                   /lib/x86_64-linux-gnu/ld-2.27.so
+7fb0dd04b000-7fb0dd04c000 rw-p 00000000 00:00 0 
+7ffe0980d000-7ffe0982e000 rw-p 00000000 00:00 0                          [stack]
+7ffe099a0000-7ffe099a3000 r--p 00000000 00:00 0                          [vvar]
+7ffe099a3000-7ffe099a5000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+
+
+VM Arguments:
+java_command: org.jetbrains.git4idea.http.GitAskPassApp Username for 'https://github.com': 
+java_class_path (initial): /home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/plugins/git4idea/lib/git4idea-rt.jar:/home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/lib/xmlrpc-2.0.1.jar:/home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/lib/commons-codec-1.13.jar:/home/cindyfu/.local/share/JetBrains/Toolbox/apps/PyCharm-P/ch-0/193.6494.30/lib/util.jar
+Launcher Type: SUN_STANDARD
+
+[Global flags]
+     intx CICompilerCount                          = 12                                        {product} {ergonomic}
+     uint ConcGCThreads                            = 3                                         {product} {ergonomic}
+     uint G1ConcRefinementThreads                  = 13                                        {product} {ergonomic}
+   size_t G1HeapRegionSize                         = 2097152                                   {product} {ergonomic}
+    uintx GCDrainStackTargetSize                   = 64                                        {product} {ergonomic}
+   size_t InitialHeapSize                          = 524288000                                 {product} {ergonomic}
+   size_t MarkStackSize                            = 4194304                                   {product} {ergonomic}
+   size_t MaxHeapSize                              = 8388608000                                {product} {ergonomic}
+   size_t MinHeapDeltaBytes                        = 2097152                                   {product} {ergonomic}
+    uintx NonNMethodCodeHeapSize                   = 7594288                                {pd product} {ergonomic}
+    uintx NonProfiledCodeHeapSize                  = 122031976                              {pd product} {ergonomic}
+    uintx ProfiledCodeHeapSize                     = 122031976                              {pd product} {ergonomic}
+    uintx ReservedCodeCacheSize                    = 251658240                              {pd product} {ergonomic}
+     bool SegmentedCodeCache                       = true                                      {product} {ergonomic}
+     bool UseCompressedClassPointers               = true                                 {lp64_product} {ergonomic}
+     bool UseCompressedOops                        = true                                 {lp64_product} {ergonomic}
+     bool UseG1GC                                  = true                                      {product} {ergonomic}
+
+Logging:
+Log output configuration:
+ #0: stdout all=warning uptime,level,tags
+ #1: stderr all=off uptime,level,tags
+
+Environment Variables:
+PATH=/usr/lib/git-core:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+SHELL=/bin/bash
+DISPLAY=:0
+
+Signal Handlers:
+SIGSEGV: [libjvm.so+0xd9fcf0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGBUS: [libjvm.so+0xd9fcf0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGFPE: [libjvm.so+0xd9fcf0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGPIPE: [libjvm.so+0xba10a0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGXFSZ: [libjvm.so+0xba10a0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGILL: [libjvm.so+0xd9fcf0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGUSR2: [libjvm.so+0xba0f40], sa_mask[0]=00100000000000000000000000000000, sa_flags=SA_RESTART|SA_SIGINFO
+SIGHUP: SIG_DFL, sa_mask[0]=00000000000000000000000000000000, sa_flags=none
+SIGINT: SIG_DFL, sa_mask[0]=00000000000000000000000000000000, sa_flags=none
+SIGTERM: SIG_DFL, sa_mask[0]=00000000000000000000000000000000, sa_flags=none
+SIGQUIT: SIG_DFL, sa_mask[0]=00000000000000000000000000000000, sa_flags=none
+
+
+---------------  S Y S T E M  ---------------
+
+OS:DISTRIB_ID=LinuxMint
+DISTRIB_RELEASE=19.3
+DISTRIB_CODENAME=tricia
+DISTRIB_DESCRIPTION="Linux Mint 19.3 Tricia"
+uname:Linux 4.15.0-76-generic #86-Ubuntu SMP Fri Jan 17 17:24:28 UTC 2020 x86_64
+libc:glibc 2.27 NPTL 2.27 
+rlimit: STACK 8192k, CORE 0k, NPROC 127535, NOFILE 1048576, AS infinity, DATA infinity, FSIZE infinity
+load average:0.01 0.11 0.28
+
+/proc/meminfo:
+MemTotal:       32762980 kB
+MemFree:          277344 kB
+MemAvailable:     190124 kB
+Buffers:           11336 kB
+Cached:          1253428 kB
+SwapCached:        61624 kB
+Active:         28960512 kB
+Inactive:        2084116 kB
+Active(anon):   28819612 kB
+Inactive(anon):  2023508 kB
+Active(file):     140900 kB
+Inactive(file):    60608 kB
+Unevictable:        1232 kB
+Mlocked:            1232 kB
+SwapTotal:      16601084 kB
+SwapFree:              0 kB
+Dirty:               232 kB
+Writeback:             0 kB
+AnonPages:      29723180 kB
+Mapped:          1038424 kB
+Shmem:           1062156 kB
+Slab:             461352 kB
+SReclaimable:     161440 kB
+SUnreclaim:       299912 kB
+KernelStack:       69916 kB
+PageTables:       433048 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    32982572 kB
+Committed_AS:   97973216 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:           0 kB
+VmallocChunk:          0 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:    677888 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+CmaTotal:              0 kB
+CmaFree:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+DirectMap4k:     6421464 kB
+DirectMap2M:    26957824 kB
+DirectMap1G:           0 kB
+
+
+/proc/sys/kernel/threads-max (system-wide limit on the number of threads):
+255071
+
+
+/proc/sys/vm/max_map_count (maximum number of memory map areas a process may have):
+65530
+
+
+/proc/sys/kernel/pid_max (system-wide limit on number of process identifiers):
+32768
+
+
+
+container (cgroup) information:
+container_type: cgroupv1
+cpu_cpuset_cpus: 0-15
+cpu_memory_nodes: 0
+active_processor_count: 16
+cpu_quota: -1
+cpu_period: 100000
+cpu_shares: -1
+memory_limit_in_bytes: -1
+memory_and_swap_limit_in_bytes: -2
+memory_soft_limit_in_bytes: -1
+memory_usage_in_bytes: 31762087936
+memory_max_usage_in_bytes: 249291046912
+
+Steal ticks since vm start: 0
+Steal ticks percentage since vm start:  0.000
+
+CPU:total 16 (initial active 16) (8 cores per cpu, 2 threads per core) family 6 model 158 stepping 13, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, avx, avx2, aes, clmul, erms, 3dnowpref, lzcnt, ht, tsc, tscinvbit, bmi1, bmi2, adx, fma
+CPU Model and flags from /proc/cpuinfo:
+model name	: Intel(R) Core(TM) i9-9900 CPU @ 3.10GHz
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp md_clear flush_l1d arch_capabilities
+
+Memory: 4k page, physical 32762980k(277344k free), swap 16601084k(0k free)
+
+vm_info: OpenJDK 64-Bit Server VM (11.0.5+10-b520.38) for linux-amd64 JRE (11.0.5+10-b520.38), built on Jan 23 2020 05:15:08 by "" with gcc 4.8.5 20150623 (Red Hat 4.8.5-36)
+
+END.

@@ -61,7 +61,7 @@ def main(argv):
 	output_folder = args['output_folder']
 
 	constants_dict = dict()
-	constants_dict['mut_types'] = ['amp', 'rem', 'inv']
+	constants_dict['mut_types'] = ['amp', 'rem', 'inv', 'trans']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
 	constants_dict['cov'] = 20
@@ -70,12 +70,12 @@ def main(argv):
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	chrom_dict[('1', 0)] = chpr.ChrmProf(248956422)
-	chrom_dict[('1', 1)] = chpr.ChrmProf(248956422)
-	chrom_dict[('2', 0)] = chpr.ChrmProf(242193529)
-	chrom_dict[('2', 1)] = chpr.ChrmProf(242193529)
-	chrom_dict[('3', 0)] = chpr.ChrmProf(198295559)
-	chrom_dict[('3', 1)] = chpr.ChrmProf(198295559)
+	chrom_dict[('1', 0)] = chpr.ChrmProf(248956422, '1', 0)
+	chrom_dict[('1', 1)] = chpr.ChrmProf(248956422, '1', 1)
+	chrom_dict[('2', 0)] = chpr.ChrmProf(242193529, '2', 0)
+	chrom_dict[('2', 1)] = chpr.ChrmProf(242193529, '2', 1)
+	chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
+	chrom_dict[('3', 1)] = chpr.ChrmProf(198295559, '3', 1)
 
 	# sub_folder_name = 'n_' + str(n) + '_m_' + str(m) + '_l_' + str(num_mutes)
 	if not os.path.exists(output_folder):
@@ -276,16 +276,17 @@ def random_get_usages(m, n):
 def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 	# put all bps in leaf nodes into dictionary d1
 	d1 = dict()
+	d_chrom = {}
 	for idx in range(1, n + 1):
 		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
+
 		###xf: for all chromosomes for both alleles
 		for chrom in temp_bp_dict.keys():
 			if chrom not in d1:
 				d1[chrom] = set()
-			for (pos, isLeft) in temp_bp_dict[chrom]:
-				if (pos, isLeft) not in d1[chrom]:
-					d1[chrom].add((pos, isLeft))
-
+			for (pos, isLeft, chr_) in temp_bp_dict[chrom]:
+				if (pos, isLeft, chr_) not in d1[chrom]:
+					d1[chrom].add((pos, isLeft, chr_))
 	# sort vals in d1 based on pos and isLeft (isLeft == True comes first) and chrom
 	idx = 0
 	sorted_chrom = sorted(d1.keys())
@@ -294,13 +295,17 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 		d2[chrom] = dict()
 		sorted_pos_list = sorted(list(set(map(operator.itemgetter(0), d1[chrom]))))
 		for pos in sorted_pos_list:
-			if (pos, True) in d1[chrom]:
-				d2[chrom][(pos, True)] = idx
+			if (pos, True, chrom) in d1[chrom]:
+				d2[chrom][(pos, True, chrom)] = idx
 				idx += 1
-			if (pos, False) in d1[chrom]:
-				d2[chrom][(pos, False)] = idx
+			elif (pos, False, chrom) in d1[chrom]:
+				d2[chrom][(pos, False, chrom)] = idx
 				idx += 1
-
+			else:
+				print("else")
+		print("temp_bp", len(temp_bp_dict[chrom]))
+		print("before:", len(d1[chrom]))
+		print("after:", len(d2[chrom].keys()))
 	return idx, d2
 
 
@@ -362,9 +367,9 @@ def generate_c(tree, n, constants_dict):
 		# add copy number for break points
 		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
 		for chrom in temp_bp_dict:
-			for (pos, isLeft) in temp_bp_dict[chrom]:
-				cp = temp_bp_dict[chrom][(pos, isLeft)]["copy_num"]
-				col = sv_cn_idx_dict[chrom][(pos, isLeft)]
+			for (pos, isLeft, chr_,) in temp_bp_dict[chrom]:
+				cp = temp_bp_dict[chrom][(pos, isLeft, chr_)]["copy_num"]
+				col = sv_cn_idx_dict[chrom][(pos, isLeft, chr_)]
 				c[row][col] = cp
 
 		# add copy number for segments
@@ -447,9 +452,9 @@ def get_a_h_mate_dict(tree, n, constants_dict):
 		gene_prof = tree.idx_node_dict[node_name].geneProf
 		sv_dict = gene_prof.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
 		for chrm in sv_dict.keys():
-			for cur_pos, cur_is_left in sv_dict[chrm]:
-				mat_pos, mat_is_left = sv_dict[chrm][(cur_pos, cur_is_left)]['mate']
-				cur_key, mat_key = (chrm, cur_pos, cur_is_left), (chrm, mat_pos, mat_is_left)
+			for cur_pos, cur_is_left, cur_chr in sv_dict[chrm]:
+				mat_pos, mat_is_left, mat_chr = sv_dict[chrm][(cur_pos, cur_is_left, cur_chr)]['mate']
+				cur_key, mat_key = (cur_chr, cur_pos, cur_is_left), (mat_chr, mat_pos, mat_is_left)
 				if cur_key not in mate_dict:
 					mate_dict[cur_key] = mat_key
 				elif mate_dict[cur_key] != mat_key:
@@ -467,9 +472,9 @@ def get_a_h_mate_dict(tree, n, constants_dict):
 					print 'mat_key was already mated with:\t' + str(mate_dict[mat_key])
 					exit()
 
-				j = sv_cn_idx_dict[chrm][(cur_pos, cur_is_left)]
-				a[node_name - 1][j] = sv_dict[chrm][(cur_pos, cur_is_left)]['mated_reads']
-				h[node_name - 1][j] = sv_dict[chrm][(cur_pos, cur_is_left)]['total_reads']
+				j = sv_cn_idx_dict[chrm][(cur_pos, cur_is_left, cur_chr)]
+				a[node_name - 1][j] = sv_dict[chrm][(cur_pos, cur_is_left, cur_chr)]['mated_reads']
+				h[node_name - 1][j] = sv_dict[chrm][(cur_pos, cur_is_left, cur_chr)]['total_reads']
 	return a, h, mate_dict
 
 # given a matrix, save as tsv file
