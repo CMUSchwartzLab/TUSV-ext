@@ -69,7 +69,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
 	if should_overide_lambdas:
 		m = len(F)
 		l, r = Q.shape
-		lamb1 = float(l + r) / float(r) * float(m) / float(2 * (n-1) )
+		lamb1 = float(l + r) / float(l) * float(m) / float(2 * (n-1) )
 		lamb2 = float(l + r) / float(l)
 
 	Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
