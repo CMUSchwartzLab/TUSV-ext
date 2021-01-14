@@ -48,8 +48,8 @@ def _calculate_R(C, edge_list):
     N = C.shape[0]
     R = np.zeros((N, N))
     for edge in edge_list:
-        p = edge[0]
-        c = edge[1]
+        p = edge[0]-1
+        c = edge[1]-1
         R[p, c] = np.sum(np.abs(C[p,:] - C[c,:]))
     return R
 

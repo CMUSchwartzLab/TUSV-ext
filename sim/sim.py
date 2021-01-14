@@ -100,10 +100,6 @@ def main(argv):
 		l = random_get_tree(n) # list
 		print(l)
 		edge_list = get_edges(l)  ###xf: generate edges list with format of [(0,1,'r'/'l'),...]
-
-		edge_list_pickle = open("edge_list.pickle", 'wb')
-		pickle.dump(edge_list, edge_list_pickle)
-		edge_list_pickle.close()
 		
 		gp = gnpr.GeneProf(chrom_dict, constants_dict)
 
@@ -135,7 +131,9 @@ def main(argv):
 
 		generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C, c_p, c_m, a, h, mate_dict, outputFolder)
 
-
+		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
+		pickle.dump(edge_list, edge_list_pickle)
+		edge_list_pickle.close()
 # given a number n, generate all possible directed binary trees with n nodes.
 # eg. if n = 4, return [ [1,[1,[1,1]]], [1,[[1,1],1]], [[1,1],[1,1]], [[1,[1,1]],1], [[[1,1],1],1] ]
 # each 1 in the list represents a tree node.
