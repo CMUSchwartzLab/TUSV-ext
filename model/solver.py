@@ -72,9 +72,8 @@ def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_li
 
         prevC = C
 
-    f = open("training_objective", 'w')
-    f.write(obj_val)
-    f.close()
+    with open("training_objective", 'w') as f:
+        f.write(str(obj_val))
 
     return U, C, E, R, W, obj_val, None
 

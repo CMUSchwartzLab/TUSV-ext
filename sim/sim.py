@@ -19,11 +19,13 @@ import random
 import operator
 import datetime
 import shutil
+import pickle
 
 import numpy as np
 import graphviz as gv
 import chrm_prof as chpr
 import gene_prof as gnpr
+
 
 sys.path.insert(0, 'helper/')
 
@@ -98,6 +100,10 @@ def main(argv):
 		l = random_get_tree(n) # list
 		print(l)
 		edge_list = get_edges(l)  ###xf: generate edges list with format of [(0,1,'r'/'l'),...]
+
+		edge_list_pickle = open("edge_list.pickle", 'wb')
+		pickle.dump(edge_list, edge_list_pickle)
+		edge_list_pickle.close()
 		
 		gp = gnpr.GeneProf(chrom_dict, constants_dict)
 

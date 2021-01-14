@@ -4,6 +4,7 @@ import argparse # for command line arguments
 import random
 import numpy as np
 import multiprocessing as mp
+import pickle
 
 from datetime import datetime
 from graphviz import Digraph
@@ -20,9 +21,6 @@ import generate_matrices as gm # gets F, Q, G, A, H from .vcf files
 import printer as pt
 import vcf_help as vh
 
-from tusv_1130 import check_valid_input, randomly_remove_segments
-from model.solver import np_divide_0
-
 
 def _calculate_S(Pi, U, C, Gam, m, l):
     S = np.zeros((m, l))
@@ -32,23 +30,38 @@ def _calculate_S(Pi, U, C, Gam, m, l):
             sg_cpnum_est = np.sum([U[p, k] * (Gam[k, b, 0] + Gam[k, b, 1]) for k in xrange(0, N)])
             bp_cpnum_est = np.sum([U[p, k] * C[k, b] for k in xrange(0, N)])
             S[p, b] = np.abs(Pi[p, b] * sg_cpnum_est - bp_cpnum_est)
-    return np.sum(S)
+    return S
 
 
-def record_true_obj(in_dir, n, c_max, lamb1, lamb2, num_seg_subsamples, should_overide_lambdas):
-    F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
-    print(F_full, Q, G)
-    Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)
-
-    F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)
-    m = len(F)
+def _calculate_Gamma(Q, C, n):
     l, r = Q.shape
-    print(F_phasing.shape)
-    # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
-    if should_overide_lambdas:
+    N = 2 * n - 1
+    Gam = np.zeros((N, l, 2))
+    for k in xrange(0, N):
+        for b in xrange(0, l):  # define copy num of segment containing breakpoint
+            Gam[k, b, 0] = np.sum([Q[b, s] * C[k, l + s] for s in xrange(0, r)]) ### xf: change to new Gamma and C matrix
+            Gam[k, b, 1] = np.sum([Q[b, s] * C[k, l + s + r] for s in xrange(0, r)])
+    return Gam
 
-        lamb1 = float(l + r) / float(l) * float(m) / float(2 * (n - 1))
-        lamb2 = float(l + r) / float(l)
 
-    F_seg = F[:, l:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
-    Pi = np_divide_0(F[:, :l], F_seg)
+def _calculate_R(C, edge_list):
+    N = C.shape[0]
+    R = np.zeros((N, N))
+    for edge in edge_list:
+        p = edge[0]
+        c = edge[1]
+        R[p, c] = np.sum(np.abs(C[p,:] - C[c,:]))
+    return R
+
+
+def _calculate_obj_val(F_phasing, C, U, R, S):
+    F_hat = np.matmul(U, C)
+    obj_val = np.sum(np.abs(F_hat - F_phasing)) + np.sum(R) + np.sum(S)
+    return obj_val
+
+
+def np_divide_0(a, b):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        c = np.true_divide(a, b)
+        c[~ np.isfinite(c)] = 0  # -inf inf NaN
+    return c
