@@ -85,7 +85,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
     if should_overide_lambdas:
         m = len(F)
         l, r = Q.shape
-        lamb1 = float(l + r) / float(r) * float(m) / float(2 * (n-1) )
+        lamb1 = float(l + r) / float(l) * float(m) / float(2 * (n-1) )
         lamb2 = float(l + r) / float(l)
 
     Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
@@ -139,7 +139,7 @@ def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should
     with open(in_dir_split[0] + "/edge_list.pickle", 'rb') as f:
         edge_list = pickle.load(f)
     R = _calculate_R(C_true, edge_list)
-    obj_val = _calculate_obj_val(F_phasing, C_true, U_true, R, S)
+    obj_val = _calculate_obj_val(F_phasing, C_true, U_true, R, S, lamb1, lamb2)
     with open(in_dir + "/true_objective", 'w') as g:
         g.write(str(obj_val))
 
