@@ -85,8 +85,8 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
     if should_overide_lambdas:
         m = len(F)
         l, r = Q.shape
-        lamb1 = float(l + r) / float(l) * float(m) / float(2 * (n-1) )
-        lamb2 = float(l + r) / float(l)
+        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )
+        lamb2 = float(l + 2*r) / float(l)
 
     Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
     num_complete = 0
@@ -108,7 +108,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
             best_i = i
 
     with open(out_dir + "/training_objective", 'w') as f:
-        f.write(str(obj_val))
+        f.write(str(best_obj_val))
 
     writer = build_vcf_writer(F_full, Cs[best_i], org_indxs, G, bp_attr, cv_attr, metadata_fname)
 
@@ -126,8 +126,8 @@ def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should
     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
     if should_overide_lambdas:
 
-        lamb1 = float(l + r) / float(l) * float(m) / float(2 * (n - 1))
-        lamb2 = float(l + r) / float(l)
+        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))
+        lamb2 = float(l + 2*r) / float(l)
 
     F_seg = F[:, l:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
     Pi = np_divide_0(F[:, :l], F_seg)
@@ -138,9 +138,9 @@ def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should
         in_dir_split = in_dir_split[0].rsplit('/', 1)
     with open(in_dir_split[0] + "/edge_list.pickle", 'rb') as f:
         edge_list = pickle.load(f)
-    R = _calculate_R(C_true, edge_list)
+    R = _calculate_R(C_true, edge_list, l)
     obj_val = _calculate_obj_val(F_phasing, C_true, U_true, R, S, lamb1, lamb2)
-    with open(in_dir + "/true_objective", 'w') as g:
+    with open(out_dir + "/true_objective", 'w') as g:
         g.write(str(obj_val))
 
 

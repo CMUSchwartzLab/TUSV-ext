@@ -44,19 +44,19 @@ def _calculate_Gamma(Q, C, n):
     return Gam
 
 
-def _calculate_R(C, edge_list):
+def _calculate_R(C, edge_list, l):
     N = C.shape[0]
     R = np.zeros((N, N))
     for edge in edge_list:
         p = edge[0]-1
         c = edge[1]-1
-        R[p, c] = np.sum(np.abs(C[p,:] - C[c,:]))
+        R[p, c] = np.sum(np.abs(C[p,l:] - C[c,l:]))
     return R
 
 
 def _calculate_obj_val(F_phasing, C, U, R, S, lambda1, lambda2):
     F_hat = np.matmul(U, C)
-    obj_val = np.sum(np.abs(F_hat - F_phasing)) + lambda1*np.sum(R) + lambda2*np.sum(S)
+    obj_val = np.sum(np.abs(F_hat - F_phasing)) + lambda1 * np.sum(R) + lambda2*np.sum(S)
     return obj_val
 
 
