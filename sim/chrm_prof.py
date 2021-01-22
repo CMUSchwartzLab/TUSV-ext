@@ -122,17 +122,18 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			cur = cur.r
 
 		self.n = self.n - (end - bgn + 1)
+
 		return True
 
 	###xf: add translocation
 	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1):
-		print(ins_Pos, bgn1, end1)
+		print(self.chrm + ' ' + str(self.pm), ins_Pos, from_ChrmProf.chrm + ' ' + str(from_ChrmProf.pm), bgn1, end1)
 		if not from_ChrmProf._is_in_bounds(bgn1, end1) or not from_ChrmProf._is_splitable(bgn1, end1):
 			return False
 		from_ChrmProf._2split(bgn1, end1) # split mutated and original list nodes at bgn and end positions
 
 		insR, head, tail = _copy_from_to(from_ChrmProf.mut, bgn1, end1) ### xf: copied head and tail
-
+		print(_get_org_pos(head, True)[0])
 		head_, tail_ = _get_head_tail(from_ChrmProf.mut, bgn1, end1) ### xf: original head and tail, to be removed in above codes
 
 		newL_ = head_.l
@@ -167,6 +168,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			newL.r = head
 		# increment bgn and end values for inserted region and segments to right
 		seg_diff = ins_Pos - bgn1
+		head_arc = head
 		while True:
 			head.bgn += seg_diff
 			head.end += seg_diff
@@ -180,6 +182,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			head.end += seg_len
 			head = head.r
 		self.n = self.n + (end1 - bgn1 + 1)
+		print(head_arc.bgn, tail.end, _get_org_pos(tail, False)[0],(_get_org_pos(tail, False)[1]).chrm, (_get_org_pos(tail.r, True)[1]).chrm)
 		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
