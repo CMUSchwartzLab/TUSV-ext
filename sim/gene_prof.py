@@ -147,7 +147,7 @@ class GeneProf:
 		elif mut_type == 'trans':
 			mut_chr2 = random.choice(list(self.chrom_dict.keys()))
 			ins_Pos = random.randint(0, self.chrom_dict[mut_chr2].n)
-			self.chrom_dict[mut_chr2].trans(self.chrom_dict[mut_chr], ins_Pos, mut_bgnPos, mut_endPos)
+			self.chrom_dict[mut_chr] = self.chrom_dict[mut_chr2].trans(self.chrom_dict[mut_chr], ins_Pos, mut_bgnPos, mut_endPos)
 
 		self.copy_num_dict = self.get_copy_nums_dict()
 		self.mutCount += 1
@@ -229,6 +229,7 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
+								print(others[tup_chr][tup_pos]["mate"],others_p[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mate"] = others_p[tup_chr][tup_pos]["mate"]
 								others[tup_chr][tup_pos]["mated_reads"] += others_p[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_p[tup_chr][tup_pos]["total_reads"]
@@ -245,6 +246,7 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
+								print(others[tup_chr][tup_pos]["mate"],others_m[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mate"] = others_m[tup_chr][tup_pos]["mate"]
 								others[tup_chr][tup_pos]["mated_reads"] += others_m[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_m[tup_chr][tup_pos]["total_reads"]
@@ -282,10 +284,12 @@ class GeneProf:
 				assert chr_ == chr
 				assert pm_ == pm
 				if (pos, isLeft, chr) in result[chr].keys():
-					if result[chr][(pos, isLeft, chr)]["mate"] == others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mated"][0:3]:
+					if result[chr][(pos, isLeft, chr)]["mate"] == others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0:3]:
 						result[chr][(pos, isLeft, chr)]["mated_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mated_reads"]
 						result[chr][(pos, isLeft, chr)]["total_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["total_reads"]
 						result[chr][(pos, isLeft, chr)]["copy_num"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["copy_num"]
+					else:
+						print(result[chr][(pos, isLeft, chr)]["mate"], others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0:3])
 				else:
 					result[chr][(pos, isLeft, chr)] = others[(chr, pm)][(pos, isLeft, chr_, pm_)]
 					result[chr][(pos, isLeft, chr)]["mate"] = (others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0],

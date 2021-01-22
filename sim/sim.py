@@ -61,7 +61,7 @@ def main(argv):
 	output_folder = args['output_folder']
 
 	constants_dict = dict()
-	constants_dict['mut_types'] = ['amp', 'rem', 'inv', 'trans']
+	constants_dict['mut_types'] = ['trans']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
 	constants_dict['cov'] = 20
@@ -277,7 +277,7 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 	# put all bps in leaf nodes into dictionary d1
 	d1 = dict()
 	d_chrom = {}
-	for idx in range(1, n + 1):
+	for idx in tree.node_list:
 		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
 
 		###xf: for all chromosomes for both alleles
@@ -287,25 +287,30 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 			for (pos, isLeft, chr_) in temp_bp_dict[chrom]:
 				if (pos, isLeft, chr_) not in d1[chrom]:
 					d1[chrom].add((pos, isLeft, chr_))
+
+
 	# sort vals in d1 based on pos and isLeft (isLeft == True comes first) and chrom
 	idx = 0
 	sorted_chrom = sorted(d1.keys())
 	d2 = dict()
 	for chrom in sorted_chrom:
+		#print(d1[chrom])
 		d2[chrom] = dict()
+		for i in range(0,len(d1[chrom])):
+			for j in range(i+1,len(d1[chrom])):
+				if list(d1[chrom])[i][0] == list(d1[chrom])[j][0]:
+					print(list(d1[chrom])[i])
 		sorted_pos_list = sorted(list(set(map(operator.itemgetter(0), d1[chrom]))))
+		#print(len(sorted_pos_list))
 		for pos in sorted_pos_list:
 			if (pos, True, chrom) in d1[chrom]:
 				d2[chrom][(pos, True, chrom)] = idx
 				idx += 1
-			elif (pos, False, chrom) in d1[chrom]:
+			if (pos, False, chrom) in d1[chrom]:
 				d2[chrom][(pos, False, chrom)] = idx
 				idx += 1
-			else:
-				print("else")
-		print("temp_bp", len(temp_bp_dict[chrom]))
-		print("before:", len(d1[chrom]))
-		print("after:", len(d2[chrom].keys()))
+		#print("d1", chrom, len(d1[chrom]))
+		#print("d2",chrom, len(d2[chrom]))
 	return idx, d2
 
 
@@ -317,7 +322,7 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 #      val: index
 def get_seg_copy_num_idx_dict(tree, n):
 	d1 = dict()
-	for idx in range(1, n + 1): ### xf: go through all the nodes in the tree
+	for idx in tree.node_list: ### xf: go through all the nodes in the tree
 		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
 		for chrom in temp_copy_nums_dict.keys():
 			if chrom not in d1:

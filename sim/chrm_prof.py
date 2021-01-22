@@ -63,7 +63,6 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			del svs[k]
 		# add breakpoint copy numbers
 		_append_bp_copy_num(svs, others, self.mut)
-
 		return svs, others
 
 	def deepcopy(self):
@@ -127,6 +126,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 	###xf: add translocation
 	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1):
+		print(ins_Pos, bgn1, end1)
 		if not from_ChrmProf._is_in_bounds(bgn1, end1) or not from_ChrmProf._is_splitable(bgn1, end1):
 			return False
 		from_ChrmProf._2split(bgn1, end1) # split mutated and original list nodes at bgn and end positions
@@ -180,7 +180,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			head.end += seg_len
 			head = head.r
 		self.n = self.n + (end1 - bgn1 + 1)
-		return True
+		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
 	def amp(self, bgn, end):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
@@ -493,7 +493,7 @@ def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
 	matePos, mateOrgNode = _get_org_pos(mate, not isBgn)
 
 	isLeft = mate.parent.end == matePos
-	isAdj = (abs(curPos - matePos) == 1 and curOrgNode.chrm == mateOrgNode.chrm and curOrgNode.pm == mateOrgNode.chrm)
+	isAdj = (abs(curPos - matePos) == 1 and curOrgNode.chrm == mateOrgNode.chrm and curOrgNode.pm == mateOrgNode.pm)
 
 	return matePos, isLeft, isAdj, mateOrgNode.chrm, mateOrgNode.pm
 
@@ -502,8 +502,8 @@ def _get_org_pos(node, isBgn):
 	if node.is_inv:
 		isBgn = not isBgn
 	if isBgn:
-		return node.parent.bgn, node
-	return node.parent.end, node
+		return node.parent.bgn, node.parent
+	return node.parent.end, node.parent
 
 def _get_cur_pos(cur, isBgn):
 	oCur = cur.parent
@@ -588,10 +588,10 @@ def _append_bp_copy_num(svs, others, mut_head):
 	for tup, val in svs.iteritems():
 		if 'copy_num' not in val:
 			svs[tup]['copy_num'] = 0
-	for others_chr in others.values():
-		for tup, val in others_chr.iteritems():
+	for tup1, others_chr in others.iteritems():
+		for tup2, val in others_chr.iteritems():
 			if 'copy_num' not in val:
-				others_chr[tup]['copy_num'] = 0
+				others[tup1][tup2]['copy_num'] = 0
 	#print("svs after", svs, "others after", others)
 #
 #   DEEP COPY
