@@ -19,11 +19,13 @@ import random
 import operator
 import datetime
 import shutil
+import pickle
 
 import numpy as np
 import graphviz as gv
 import chrm_prof as chpr
 import gene_prof as gnpr
+
 
 sys.path.insert(0, 'helper/')
 
@@ -129,7 +131,9 @@ def main(argv):
 
 		generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C, c_p, c_m, a, h, mate_dict, outputFolder)
 
-
+		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
+		pickle.dump(edge_list, edge_list_pickle)
+		edge_list_pickle.close()
 # given a number n, generate all possible directed binary trees with n nodes.
 # eg. if n = 4, return [ [1,[1,[1,1]]], [1,[[1,1],1]], [[1,1],[1,1]], [[1,[1,1]],1], [[[1,1],1],1] ]
 # each 1 in the list represents a tree node.

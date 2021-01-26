@@ -31,7 +31,8 @@ import file_manager as fm      # sanitizes file and directory arguments
 import generate_matrices as gm # gets F, Q, G, A, H from .vcf files
 import printer as pt
 import vcf_help as vh
-
+from test_simu import _calculate_obj_val, _calculate_R, _calculate_Gamma, _calculate_S, np_divide_0
+import pickle
 
 # # # # # # # # # # # # #
 #   C O N S T A N T S   #
@@ -54,6 +55,21 @@ def main(argv):
     args = get_args(argv)
     write_readme(args['output_directory'], args)
     unmix(args['input_directory'], args['output_directory'], args['num_leaves'], args['c_max'], args['lambda1'], args['lambda2'], args['restart_iters'], args['cord_desc_iters'], args['processors'], args['time_limit'], args['metadata_file'], args['num_subsamples'], args['overide_lambdas'])
+
+def main2(argv):
+    args = get_args(argv)
+    write_readme(args['output_directory'], args)
+    upper_directory_split = args['input_directory'].rsplit('/', 1)
+    if upper_directory_split[1] == '':
+        upper_directory_split = upper_directory_split[0].rsplit('/', 1)
+    U = np.loadtxt(upper_directory_split[0] + '/U.tsv', delimiter='\t')
+    C = np.loadtxt(upper_directory_split[0] + '/C.tsv', delimiter='\t')
+    F = np.loadtxt(upper_directory_split[0] + '/F.tsv', delimiter='\t')
+    record_true_obj(args['input_directory'], args['output_directory'], args['num_leaves'], args['lambda1'], args['lambda2'],  args['num_subsamples'], args['overide_lambdas'], U, C, F)
+    unmix(args['input_directory'], args['output_directory'], args['num_leaves'], args['c_max'], args['lambda1'],
+      args['lambda2'], args['restart_iters'], args['cord_desc_iters'], args['processors'], args['time_limit'],
+      args['metadata_file'], args['num_subsamples'], args['overide_lambdas'])
+
 
 #  input: num_seg_subsamples (int or None) number of segments to include in deconvolution. these are
 #           in addition to any segments contining an SV as thos are manditory for the SV. None is all segments
@@ -91,9 +107,43 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
             best_obj_val = obj_val
             best_i = i
 
+    with open(out_dir + "/training_objective", 'w') as f:
+        f.write(str(best_obj_val))
+
     writer = build_vcf_writer(F_full, Cs[best_i], org_indxs, G, bp_attr, cv_attr, metadata_fname)
 
     write_to_files(out_dir, Us[best_i], Cs[best_i], Es[best_i], Rs[best_i], Ws[best_i], F, obj_vals[best_i], F_full, F_phasing_full, org_indxs, writer)
+
+def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should_overide_lambdas, U_true, C_true, F_true):
+    F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
+    Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)
+
+    F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)  # for simulation, it will not change
+    assert np.array_equal(F_phasing,F_true)
+    m = F.shape[0]
+    l, r = Q.shape
+    print(F_phasing.shape)
+    # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
+    if should_overide_lambdas:
+
+        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))
+        lamb2 = float(l + 2*r) / float(l)
+
+    F_seg = F[:, l:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
+    Pi = np_divide_0(F[:, :l], F_seg)
+    Gamma = _calculate_Gamma(Q, C_true, n)
+    S = _calculate_S(Pi, U_true, C_true, Gamma, m, l)
+    in_dir_split = in_dir.rsplit('/', 1)
+    if in_dir_split[1] == '':
+        in_dir_split = in_dir_split[0].rsplit('/', 1)
+    with open(in_dir_split[0] + "/edge_list.pickle", 'rb') as f:
+        edge_list = pickle.load(f)
+    R = _calculate_R(C_true, edge_list, l)
+    obj_val = _calculate_obj_val(F_phasing, C_true, U_true, R, S, lamb1, lamb2)
+    with open(out_dir + "/true_objective", 'w') as g:
+        g.write(str(obj_val))
+
+
 
 # creates a readme file with the command in it. 
 def write_readme(dname, args, script_name = os.path.basename(__file__)):
@@ -408,5 +458,6 @@ def set_non_dir_args(parser):
 #   C A L L   T O   M A I N   F U N C T I O N   #
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
+
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main2(sys.argv[1:])
