@@ -178,7 +178,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			head_.bgn += seg_diff
 			head_.end += seg_diff
 			head_.chrm = self.chrm
-			head_.pm = self.chrm
+			head_.pm = self.pm
 			if head_ == tail_:
 				break
 			head_ = head_.r
