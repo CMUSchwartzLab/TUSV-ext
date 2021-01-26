@@ -50,11 +50,11 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		svs = {}
 		others = {}
 		cur = self.mut
-		#print(chrm,pm)
+		print(self.chrm,self.pm)
 		while cur != None:  ###xf: go through along the chromosome
 			_add_sv_to_dict(svs, others, cur, True, chrm, pm)
 			_add_sv_to_dict(svs, others, cur, False, chrm, pm)
-			#print(cur.bgn,cur.end, _get_org_pos(cur,True)[0], _get_org_pos(cur,False)[0])
+			print(cur.bgn,cur.end, _get_org_pos(cur,True)[0], _get_org_pos(cur,False)[0])
 			cur = cur.r
 
 		# remove any splits that are not actually breakpoints
@@ -68,20 +68,13 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		_append_bp_copy_num(svs, others, self.mut)
 		return svs, others
 
-	def deepcopy(self):
+	def deepcopy_(self, other_muts):
 		c = ChrmProf(self.n, self.chrm, self.pm)
-		c.org, muts = _deepcopy_org(self.org)
-		muts = sorted(muts, key = lambda x: x.bgn)
-		n = len(muts)
-		for i in xrange(0, n):
-			if i != 0:
-				muts[i].l = muts[i-1]
-			if i != n-1:
-				muts[i].r = muts[i+1]
-		c.mut = muts[0]
-		return c
+		c.org, muts, other_muts = _deepcopy_org(self.org, other_muts)
+		return c, muts, other_muts
 
 	def inv(self, bgn, end):
+		print("inv",self.chrm, bgn,end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
@@ -91,6 +84,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		return True
 
 	def rem(self, bgn, end):
+		print("rem",self.chrm, bgn, end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
@@ -130,7 +124,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 	###xf: add translocation
 	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1):
-		#print(self.chrm + ' ' + str(self.pm), ins_Pos, from_ChrmProf.chrm + ' ' + str(from_ChrmProf.pm), bgn1, end1)
+		print(self.chrm + ' ' + str(self.pm), ins_Pos, from_ChrmProf.chrm + ' ' + str(from_ChrmProf.pm), bgn1, end1)
 		if not from_ChrmProf._is_in_bounds(bgn1, end1) or not from_ChrmProf._is_splitable(bgn1, end1):
 			return False
 		from_ChrmProf._2split(bgn1, end1) # split mutated and original list nodes at bgn and end positions
@@ -183,6 +177,8 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		while True:
 			head_.bgn += seg_diff
 			head_.end += seg_diff
+			head_.chrm = self.chrm
+			head_.pm = self.chrm
 			if head_ == tail_:
 				break
 			head_ = head_.r
@@ -196,10 +192,19 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		self.n = self.n + (end1 - bgn1 + 1)
 		from_ChrmProf.n -= (end1 - bgn1 + 1)
 		mut = from_ChrmProf.mut
+		while mut is not None:
+			print(mut.bgn, mut.end)
+			mut = mut.r
+		mut2 = self.mut
+		while mut2 is not None:
+			print(mut2.bgn, mut2.end)
+			mut2 = mut2.r
+		print(from_ChrmProf.mut.bgn, self.mut.bgn)
 		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
 	def amp(self, bgn, end):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
+		print("amp",self.chrm,bgn,end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
@@ -616,7 +621,9 @@ def _append_bp_copy_num(svs, others, mut_head):
 #  input: headA (OrgNode) old head
 # output: headB (OrgNode) new head
 #         muts (list of MutNode) list of all MutNodes created as children for OrgNodes
-def _deepcopy_org(headA):
+def _deepcopy_org(headA, other_muts):
+	chrm = headA.chrm
+	pm = headA.pm
 	curA = headA
 	i = 0
 	prvB = None
@@ -636,7 +643,35 @@ def _deepcopy_org(headA):
 			cB = cA.copy()
 			cB.parent = curB
 			curB.children.append(cB)
-			muts.append(cB)
+			if cA.chrm == chrm and cA.pm == pm:
+				muts.append(cB)
+			else:
+				if (cA.chrm, cA.pm) not in other_muts.keys():
+					other_muts[(cA.chrm, cA.pm)] = []
+				other_muts[(cA.chrm, cA.pm)].append(cB)
+		curA = curA.r
+	return headB, muts, other_muts
+
+###xf: deepcopy mutNode
+def _deepcopy_mut(headA):
+	curA = headA
+	i = 0
+	prvB = None
+	muts = []
+	while curA != None:
+		curB = curA.copy()
+		if i == 0:
+			headB = curB
+			i += 1
+		curB.l = prvB
+		if prvB != None:
+			prvB.r = curB
+		prvB = curB
+
+		# create all mut children
+		pA = curA.parent
+		pB = pA.copy()
+
 
 		curA = curA.r
 	return headB, muts

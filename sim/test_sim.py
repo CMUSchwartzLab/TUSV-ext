@@ -51,14 +51,14 @@ print edge_list
 print 'Test tree class:'
 
 chrom_dict = dict()
-chrom_dict[('1', 0)] = chpr.ChrmProf("AAABBBCCCDDDEEEFFF")
-chrom_dict[('1', 1)] = chpr.ChrmProf("AAABBBCCCDDDEEEFFF")
+chrom_dict[('1', 0)] = chpr.ChrmProf("AAABBBCCCDDDEEEFFF",'1', 0)
+chrom_dict[('1', 1)] = chpr.ChrmProf("AAABBBCCCDDDEEEFFF",'1', 1)
 
-chrom_dict[('2', 0)] = chpr.ChrmProf("RRRRRSSSSSTTTTTUUUUUVVVVV")
-chrom_dict[('2', 1)] = chpr.ChrmProf("RRRRRSSSSSTTTTTUUUUUVVVVV")
+chrom_dict[('2', 0)] = chpr.ChrmProf("RRRRRSSSSSTTTTTUUUUUVVVVV",'2', 0)
+chrom_dict[('2', 1)] = chpr.ChrmProf("RRRRRSSSSSTTTTTUUUUUVVVVV",'2', 1)
 
-chrom_dict[('3', 0)] = chpr.ChrmProf("XXXXYYYYZZZZ")
-chrom_dict[('3', 1)] = chpr.ChrmProf("XXXXYYYYZZZZ")
+chrom_dict[('3', 0)] = chpr.ChrmProf("XXXXYYYYZZZZ",'3', 0)
+chrom_dict[('3', 1)] = chpr.ChrmProf("XXXXYYYYZZZZ",'3', 1)
 
 
 constants_dict = dict()

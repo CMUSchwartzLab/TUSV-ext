@@ -298,8 +298,23 @@ class GeneProf:
 	def deepcopy(self):
 		# deep copy self.chrom_dict
 		chrom_dict_new = dict()
+		other_muts_dict = {}
+		muts_dict = {}
 		for (idx,pm) in list(self.chrom_dict.keys()):
-			chrom_dict_new[(idx,pm)] = self.chrom_dict[(idx,pm)].deepcopy()
+			chrom_dict_new[(idx,pm)], muts, other_muts_dict = self.chrom_dict[(idx,pm)].deepcopy_(other_muts_dict)
+			muts_dict[(idx,pm)] = muts
+		for (idx,pm) in list(self.chrom_dict.keys()):
+			if (idx,pm) in other_muts_dict.keys():
+				print("others",other_muts_dict[(idx,pm)])
+				muts_dict[(idx,pm)] += other_muts_dict[(idx,pm)]
+			muts_sorted = sorted(muts_dict[(idx,pm)], key = lambda x: x.bgn)
+			n = len(muts_sorted)
+			for i in xrange(0, n):
+				if i != 0:
+					muts_sorted[i].l = muts_sorted[i-1]
+				if i != n-1:
+					muts_sorted[i].r = muts_sorted[i+1]
+			chrom_dict_new[(idx,pm)].mut = muts_sorted[0]
 
 		constants_dict_new = copy.deepcopy(self.constants_dict)
 
