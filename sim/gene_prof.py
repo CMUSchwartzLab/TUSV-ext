@@ -151,7 +151,6 @@ class GeneProf:
 
 		self.copy_num_dict = self.get_copy_nums_dict()
 		self.mutCount += 1
-		
 
     # make multiple mutations 
 	def multi_mutations(self, geneprof_list):
@@ -220,7 +219,7 @@ class GeneProf:
 				temp = dict()
 				# paternal chrom
 				sv_dict_p, others_p = self.chrom_dict[(idx, 0)].get_sv_read_nums(cov, read_len, idx, 0)
-
+				#print(sv_dict_p, others_p)
 				for tup_chr, items in others_p.items():
 					if tup_chr not in others.keys():
 						others[tup_chr] = items
@@ -229,7 +228,6 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
-								print(others[tup_chr][tup_pos]["mate"],others_p[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mate"] = others_p[tup_chr][tup_pos]["mate"]
 								others[tup_chr][tup_pos]["mated_reads"] += others_p[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_p[tup_chr][tup_pos]["total_reads"]
@@ -238,6 +236,7 @@ class GeneProf:
 
 				# maternal chrom
 				sv_dict_m, others_m = self.chrom_dict[(idx, 1)].get_sv_read_nums(cov, read_len, idx, 1)
+
 				for tup_chr, items in others_m.items():
 					if tup_chr not in others.keys():
 						others[tup_chr] = items
@@ -246,7 +245,6 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
-								print(others[tup_chr][tup_pos]["mate"],others_m[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mate"] = others_m[tup_chr][tup_pos]["mate"]
 								others[tup_chr][tup_pos]["mated_reads"] += others_m[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_m[tup_chr][tup_pos]["total_reads"]
@@ -289,7 +287,7 @@ class GeneProf:
 						result[chr][(pos, isLeft, chr)]["total_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["total_reads"]
 						result[chr][(pos, isLeft, chr)]["copy_num"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["copy_num"]
 					else:
-						print(result[chr][(pos, isLeft, chr)]["mate"], others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0:3])
+						print("not consist",result[chr][(pos, isLeft, chr)]["mate"], others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0:3])
 				else:
 					result[chr][(pos, isLeft, chr)] = others[(chr, pm)][(pos, isLeft, chr_, pm_)]
 					result[chr][(pos, isLeft, chr)]["mate"] = (others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0],

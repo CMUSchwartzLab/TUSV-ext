@@ -296,10 +296,10 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 	for chrom in sorted_chrom:
 		#print(d1[chrom])
 		d2[chrom] = dict()
-		for i in range(0,len(d1[chrom])):
-			for j in range(i+1,len(d1[chrom])):
-				if list(d1[chrom])[i][0] == list(d1[chrom])[j][0]:
-					print(list(d1[chrom])[i])
+		# for i in range(0,len(d1[chrom])):
+		# 	for j in range(i+1,len(d1[chrom])):
+		# 		if list(d1[chrom])[i][0] == list(d1[chrom])[j][0]:
+		# 			print(list(d1[chrom])[i])
 		sorted_pos_list = sorted(list(set(map(operator.itemgetter(0), d1[chrom]))))
 		#print(len(sorted_pos_list))
 		for pos in sorted_pos_list:
@@ -454,12 +454,15 @@ def get_a_h_mate_dict(tree, n, constants_dict):
 
 	mate_dict = {}
 	for node_name in tree.node_list:
+		#print("node",node_name)
 		gene_prof = tree.idx_node_dict[node_name].geneProf
 		sv_dict = gene_prof.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
 		for chrm in sv_dict.keys():
+			#print("ch",chrm)
 			for cur_pos, cur_is_left, cur_chr in sv_dict[chrm]:
 				mat_pos, mat_is_left, mat_chr = sv_dict[chrm][(cur_pos, cur_is_left, cur_chr)]['mate']
 				cur_key, mat_key = (cur_chr, cur_pos, cur_is_left), (mat_chr, mat_pos, mat_is_left)
+				#print(cur_key, mat_key)
 				if cur_key not in mate_dict:
 					mate_dict[cur_key] = mat_key
 				elif mate_dict[cur_key] != mat_key:
@@ -527,7 +530,7 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_id
 				pos, isLeft = key[0], key[1]
 				rec_id = get_sv_rec_id(val, l)
 				(mate_chrom, mate_pos, mate_isLeft) = mate_dict[(chrom, pos, isLeft)]
-				mate_id = sv_cn_idx_dict[mate_chrom][(mate_pos, mate_isLeft)]
+				mate_id = sv_cn_idx_dict[mate_chrom][(mate_pos, mate_isLeft, mate_chrom)]
 				alt_chr, alt_pos = mate_chrom, mate_pos
 				cnadj = F[i][val]
 				bdp, dp = int(round(mixed_a[i][val])), int(round(mixed_h[i][val]))

@@ -50,10 +50,13 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		svs = {}
 		others = {}
 		cur = self.mut
+		#print(chrm,pm)
 		while cur != None:  ###xf: go through along the chromosome
 			_add_sv_to_dict(svs, others, cur, True, chrm, pm)
 			_add_sv_to_dict(svs, others, cur, False, chrm, pm)
+			#print(cur.bgn,cur.end, _get_org_pos(cur,True)[0], _get_org_pos(cur,False)[0])
 			cur = cur.r
+
 		# remove any splits that are not actually breakpoints
 		keys_to_remove = []
 		for k, v in svs.items():
@@ -127,62 +130,72 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 	###xf: add translocation
 	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1):
-		print(self.chrm + ' ' + str(self.pm), ins_Pos, from_ChrmProf.chrm + ' ' + str(from_ChrmProf.pm), bgn1, end1)
+		#print(self.chrm + ' ' + str(self.pm), ins_Pos, from_ChrmProf.chrm + ' ' + str(from_ChrmProf.pm), bgn1, end1)
 		if not from_ChrmProf._is_in_bounds(bgn1, end1) or not from_ChrmProf._is_splitable(bgn1, end1):
 			return False
 		from_ChrmProf._2split(bgn1, end1) # split mutated and original list nodes at bgn and end positions
 
-		insR, head, tail = _copy_from_to(from_ChrmProf.mut, bgn1, end1) ### xf: copied head and tail
-		print(_get_org_pos(head, True)[0])
+		#insR, head, tail = _copy_from_to(from_ChrmProf.mut, bgn1, end1) ### xf: copied head and tail
+		#print(_get_org_pos(head, True)[0])
 		head_, tail_ = _get_head_tail(from_ChrmProf.mut, bgn1, end1) ### xf: original head and tail, to be removed in above codes
 
 		newL_ = head_.l
 		newR_ = tail_.r
 
 		if newL_ == None:
-			from_ChrmProf.mut = newR_ # change the head of the mut list to right of tail if we are removing head -> tail
+			from_ChrmProf.mut = newL_ # change the head of the mut list to right of tail if we are removing head -> tail
 		if newL_ != None:
 			newL_.r = newR_
 		if newR_ != None:
 			newR_.l = newL_
-		head_.l = None  ### xf: detach the removed segment MutNode
-		tail_.r = None
+		# head_.l = None  ### xf: detach the removed segment MutNode
+		# tail_.r = None
 
 		# remove old nodes from OrgNode children list and delete old nodes
-		while head_ != None:
-			head_.parent.children.remove(head_) # remove curent MutNode from children list of OrgNode
-			prev = head_
-			head_ = head_.r
-			del prev
+		# while head_ != None:
+		# 	head_.parent.children.remove(head_) # remove curent MutNode from children list of OrgNode
+		# 	prev = head_
+		# 	head_ = head_.r
+		# 	del prev
+
+		# decrement bgn and end values for translocated segment end to right
+		seg_len = end1 - bgn1 + 1
+		right = tail_.r
+		while right is not None:
+			right.bgn -= seg_len
+			right.end -= seg_len
+			right = right.r
 
 		### xf: remove segment finished, start translocation to the new position in current chromosome
 		self._split(ins_Pos)
 		ins_head = _get_head_ins(self.mut, ins_Pos)
 		newL = ins_head.l  ### xf: copy from amp()
 		newR = ins_head
-		head.l = newL
-		tail.r = newR
+		head_.l = newL
+		tail_.r = newR
 		if newR != None:
-			newR.l = tail
+			newR.l = tail_
 		if newL != None:
-			newL.r = head
+			newL.r = head_
 		# increment bgn and end values for inserted region and segments to right
 		seg_diff = ins_Pos - bgn1
-		head_arc = head
+		head_arc = head_
 		while True:
-			head.bgn += seg_diff
-			head.end += seg_diff
-			if head == tail:
+			head_.bgn += seg_diff
+			head_.end += seg_diff
+			if head_ == tail_:
 				break
-			head = head.r
-		head = head.r
-		seg_len = end1 - bgn1 + 1
-		while head != None:
-			head.bgn += seg_len
-			head.end += seg_len
-			head = head.r
+			head_ = head_.r
+		head_ = head_.r
+
+
+		while head_ != None:
+			head_.bgn += seg_len
+			head_.end += seg_len
+			head_ = head_.r
 		self.n = self.n + (end1 - bgn1 + 1)
-		print(head_arc.bgn, tail.end, _get_org_pos(tail, False)[0],(_get_org_pos(tail, False)[1]).chrm, (_get_org_pos(tail.r, True)[1]).chrm)
+		from_ChrmProf.n -= (end1 - bgn1 + 1)
+		mut = from_ChrmProf.mut
 		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
@@ -527,7 +540,6 @@ def _add_sv_to_dict(svs, others, cur, isBgn, chrm, pm):
 	curTup = (curPos, curIsLeft, curChrm, curPM)
 	mateTup = (matePos, mateIsLeft, mateChrm, matePM)
 
-	
 	if curTup not in svs:
 		if curChrm == chrm and curPM == pm:
 			svs[curTup] = {'total_reads': 0, 'mated_reads': 0}
@@ -566,6 +578,7 @@ def _add_sv_to_dict(svs, others, cur, isBgn, chrm, pm):
 				svs[mateTup]['mate'] = curTup
 			else:
 				others[(mateChrm, matePM)][mateTup]['mate'] = curTup
+
 
 
 def _append_bp_copy_num(svs, others, mut_head):
