@@ -25,6 +25,7 @@ import numpy as np
 import graphviz as gv
 import chrm_prof as chpr
 import gene_prof as gnpr
+from chrm_prof import *
 
 
 sys.path.insert(0, 'helper/')
@@ -63,12 +64,14 @@ def main(argv):
 	output_folder = args['output_folder']
 
 	constants_dict = dict()
-	constants_dict['mut_types'] = ['trans']
+	constants_dict['mut_types'] = ['amp', 'inv', 'rem','trans']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
 	constants_dict['cov'] = 20
 	constants_dict['read_len'] = 300
 	constants_dict['num_patients'] = 5
+	constants_dict['num_leaves'] = n
+	constants_dict['num_samples'] = m
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
@@ -470,6 +473,7 @@ def get_a_h_mate_dict(tree, n, constants_dict):
 				if cur_key not in mate_dict:
 					mate_dict[cur_key] = mat_key
 				elif mate_dict[cur_key] != mat_key:
+					#print(sv_dict[cur_chr])
 					print 'There was an error generating SVs. Rerun sim.py until there are no errors.'
 					print 'cur_key:\t' + str(cur_key)
 					print 'mat_key:\t' + str(mat_key)
@@ -478,6 +482,7 @@ def get_a_h_mate_dict(tree, n, constants_dict):
 				if mat_key not in mate_dict:
 					mate_dict[mat_key] = cur_key
 				elif mate_dict[mat_key] != cur_key:
+					#print(sv_dict[mat_chr])
 					print 'There was an error generating SVs. Rerun sim.py until there are no errors.'
 					print 'cur_key:\t' + str(cur_key)
 					print 'mat_key:\t' + str(mat_key)
@@ -534,6 +539,7 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_id
 				pos, isLeft = key[0], key[1]
 				rec_id = get_sv_rec_id(val, l)
 				(mate_chrom, mate_pos, mate_isLeft) = mate_dict[(chrom, pos, isLeft)]
+				#print(sv_cn_idx_dict[mate_chrom])
 				mate_id = sv_cn_idx_dict[mate_chrom][(mate_pos, mate_isLeft, mate_chrom)]
 				alt_chr, alt_pos = mate_chrom, mate_pos
 				cnadj = F[i][val]
@@ -690,7 +696,13 @@ class Tree:
 			return
 		curr_gp = node.geneProf
 		geneprof_list.append(curr_gp) ### xf: make sure each calling of add_mutations_along_edges will be saved, node is resursive
-		# print 'node:', node.index, 'geneprof_list:', geneprof_list
+		print 'node:', node.index, 'geneprof_list:'
+		for k in curr_gp.chrom_dict.keys():
+			print(k)
+			c = curr_gp.chrom_dict[k].mut
+			while c != None:
+				print(c.bgn, c.end, chpr._get_org_pos(c, True)[0], chpr._get_org_pos(c, False)[0])
+				c = c.r
 
 		if node.left != None:
 			curr_gp_copied_left = curr_gp.deepcopy()

@@ -98,7 +98,12 @@ class GeneProf:
 
 		return mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos
 
-
+	def is_legal_trans(self, chr1, ins_Pos, chr2, bgn, end):
+		if chr1 == chr2 and bgn <= ins_Pos <= end:
+			return False
+		if self.chrom_dict[(chr2[0], chr2[1])]._is_splitable_one(ins_Pos) is False:
+			return False
+		return True
 
 	def is_legal_mutation(self, geneprof_list, mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos):
 		mut_chr_list = [(mut_chr[0], 0), (mut_chr[0], 1)]
@@ -147,6 +152,9 @@ class GeneProf:
 		elif mut_type == 'trans':
 			mut_chr2 = random.choice(list(self.chrom_dict.keys()))
 			ins_Pos = random.randint(0, self.chrom_dict[mut_chr2].n)
+			while not self.is_legal_trans(mut_chr, ins_Pos, mut_chr2, mut_bgnPos, mut_endPos):
+				mut_chr2 = random.choice(list(self.chrom_dict.keys()))
+				ins_Pos = random.randint(0, self.chrom_dict[mut_chr2].n)
 			self.chrom_dict[mut_chr] = self.chrom_dict[mut_chr2].trans(self.chrom_dict[mut_chr], ins_Pos, mut_bgnPos, mut_endPos)
 
 		self.copy_num_dict = self.get_copy_nums_dict()
@@ -219,8 +227,9 @@ class GeneProf:
 				temp = dict()
 				# paternal chrom
 				sv_dict_p, others_p = self.chrom_dict[(idx, 0)].get_sv_read_nums(cov, read_len, idx, 0)
-				#print(sv_dict_p, others_p)
 				for tup_chr, items in others_p.items():
+					if items == {}:
+						continue
 					if tup_chr not in others.keys():
 						others[tup_chr] = items
 					else:
@@ -228,7 +237,7 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
-								others[tup_chr][tup_pos]["mate"] = others_p[tup_chr][tup_pos]["mate"]
+								print(others[tup_chr][tup_pos]["mate"] == others_p[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mated_reads"] += others_p[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_p[tup_chr][tup_pos]["total_reads"]
 								others[tup_chr][tup_pos]["copy_num"] += others_p[tup_chr][tup_pos]["copy_num"]
@@ -236,8 +245,9 @@ class GeneProf:
 
 				# maternal chrom
 				sv_dict_m, others_m = self.chrom_dict[(idx, 1)].get_sv_read_nums(cov, read_len, idx, 1)
-
 				for tup_chr, items in others_m.items():
+					if items == {}:
+						continue
 					if tup_chr not in others.keys():
 						others[tup_chr] = items
 					else:
@@ -245,7 +255,7 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
-								others[tup_chr][tup_pos]["mate"] = others_m[tup_chr][tup_pos]["mate"]
+								print(others[tup_chr][tup_pos]["mate"] == others_m[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mated_reads"] += others_m[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_m[tup_chr][tup_pos]["total_reads"]
 								others[tup_chr][tup_pos]["copy_num"] += others_m[tup_chr][tup_pos]["copy_num"]
@@ -279,6 +289,7 @@ class GeneProf:
 				result[idx] = temp
 		for (chr, pm) in others.keys():
 			for (pos, isLeft, chr_, pm_) in others[(chr, pm)]:
+				print (pos, isLeft, chr_, pm_)
 				assert chr_ == chr
 				assert pm_ == pm
 				if (pos, isLeft, chr) in result[chr].keys():
