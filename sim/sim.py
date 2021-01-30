@@ -769,7 +769,7 @@ def get_args(argv):
 	parser.add_argument('-c', '--total_number_of_mutations', type = int, dest = "num_mutes", required = True)
 	parser.add_argument('-s', '--expect_mut_len', type = int, dest = "size_mutes", required = True)
 	parser.add_argument('-o', '--output_folder', type = str, dest = "output_folder", required = True)
-	parser.add_argument('-p', '--num_patients', type=str, dest="num_patients", required=True)
+	parser.add_argument('-p', '--num_patients', type=int, dest="num_patients", default=5)
 	return vars(parser.parse_args(argv))
 
 
