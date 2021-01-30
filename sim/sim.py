@@ -51,6 +51,7 @@ def main(argv):
 	m = args['m']
 	n = args['n']
 	num_mutes = args['num_mutes']
+	num_patients = args['num_patients']
 	
 	directory = os.path.dirname(os.path.realpath(__file__))
 
@@ -69,7 +70,7 @@ def main(argv):
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
 	constants_dict['cov'] = 20
 	constants_dict['read_len'] = 300
-	constants_dict['num_patients'] = 5
+	constants_dict['num_patients'] = num_patients
 	constants_dict['num_leaves'] = n
 	constants_dict['num_samples'] = m
 	
@@ -768,6 +769,7 @@ def get_args(argv):
 	parser.add_argument('-c', '--total_number_of_mutations', type = int, dest = "num_mutes", required = True)
 	parser.add_argument('-s', '--expect_mut_len', type = int, dest = "size_mutes", required = True)
 	parser.add_argument('-o', '--output_folder', type = str, dest = "output_folder", required = True)
+	parser.add_argument('-p', '--num_patients', type=int, dest="num_patients", default=5)
 	return vars(parser.parse_args(argv))
 
 
