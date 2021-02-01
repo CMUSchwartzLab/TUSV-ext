@@ -280,11 +280,15 @@ def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, Gam, c_max, 
         mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
     for i in xrange(0, N):
         for j in xrange(0, N):
-            for b in xrange(0, l):
-                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - W[i, j, b] - (2 - E[i, j] - D[b]) * (2 * c_max + 1))
-                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] - W[i, j, b] + (2 - E[i, j] - D[b]) * (2 * c_max + 2))
-                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - W[i, j, b] - (1 - E[i, j] + D[b]) * (2 * c_max + 1))
-                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] - W[i, j, b] + (1 - E[i, j] + D[b]) * (2 * c_max + 2))
+            for b in xrange(0, l): ### xf: only set constraints to the breakpoints that are not appeared in this branch
+                con_sgn0 = mod.addVar(vtype=gp.GRB.BINARY)
+                mod.addConstr(con_sgn0 == _get_consensus_sgn(mod, Gam[j, b, 0] - Gam[i, b, 0], C[j, b] - C[i, b], -c_max, c_max)) # 2 if both are positive
+                con_sgn1 = mod.addVar(vtype=gp.GRB.BINARY)
+                mod.addConstr(con_sgn1 == _get_consensus_sgn(mod, Gam[j, b, 1] - Gam[i, b, 1], C[j, b] - C[i, b], -c_max, c_max)) # 0 if both are negative
+                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - (4 - E[i, j] - D[b] + W[i, j, b] - con_sgn0) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] + (2 - E[i, j] - D[b] + W[i, j, b] + con_sgn0) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - (3 - E[i, j] + D[b] + W[i, j, b] - con_sgn1) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] + (1 - E[i, j] + D[b] + W[i, j, b] + con_sgn1) * (2 * c_max + 1))
 
 
 ### xf: removed this section
@@ -467,9 +471,23 @@ def _get_gp_3D_arr_bin_var(mod, l, m, n):
 def _get_abs(mod, x):
     x_abs = mod.addVar(vtype=gp.GRB.CONTINUOUS)
     # mod.update() # <- removing this drastically speeds up solver
-    mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, x)
-    mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1 * x)
+    mod.addConstr(x_abs == gp.abs_(x))
+    #mod.addConstr(x_abs, gp.GRB.GREATER_EQUAL, -1 * x)
     return x_abs
+
+
+def _get_sgn(mod, x, lb, ub): ###xf: when b=0, x<=0, when b=1, x>=1
+    b = mod.addVar(vtype=gp.GRB.BINARY)
+    mod.addConstr(lb * (1-b) <= x)
+    mod.addConstr(x <= ub * b)
+    return b
+
+
+def _get_consensus_sgn(mod, x1, x2, lb, ub):
+    con = mod.addVar(vtype=gp.GRB.INTEGER)
+    #mod.addConstr(_get_sgn(mod, x1, lb, ub) == _get_sgn(mod, x2, lb, ub))
+    mod.addConstr(con == _get_sgn(mod, x1, lb, ub) + _get_sgn(mod, x2, lb, ub))
+    return con
 
 
 def _get_bin_rep(mod, X, vmax):
