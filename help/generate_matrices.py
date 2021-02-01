@@ -433,4 +433,8 @@ def is_cnv_record(rec):
 
 
 def is_sv_record(rec):
-    return rec.ID[0:2] == 'sv' or rec.ID[0:3] == 'snv'
+    return rec.ID[0:2] == 'sv'
+
+
+def is_snv_record(rec):
+    return rec.ID[0:3] == 'snv'
