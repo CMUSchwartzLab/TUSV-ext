@@ -76,12 +76,49 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		svs, others = _append_bp_copy_num(svs, others, self.mut)
 		return svs, others
 
+	def get_snvs(self, snvs):
+		cur = self.mut
+		while cur != None:  ###xf: go through along the chromosome
+			for snv_mut in cur.SNV_Mut_children:
+				snv_org = snv_mut.SNV_Org_parent
+				snv_tuple = (snv_org.chrm, snv_org.pos)
+				if snv_tuple not in snvs.keys():
+					snvs[snv_tuple] = {'cn': 0}
+				snvs[snv_tuple]['cn'] += 1
+			cur = cur.r
+		return snvs
+
+	### xf: add SNVs
+	def point_mutation(self, pos):
+		splitMut = self.mut
+		while splitMut != None and not (splitMut.bgn <= pos and pos <= splitMut.end):
+			splitMut = splitMut.r
+
+		SNV_MutNode = _SNV_MutNode(pos, self.chrm, self.pm)
+
+		SNV_MutNode.Mut_parent = splitMut
+		splitMut.SNV_Mut_children.append(SNV_MutNode)
+
+		orgNode = splitMut.parent
+		if splitMut.is_inv:
+			org_pos = orgNode.end - (pos - splitMut.bgn)
+		else:
+			org_pos = pos
+		SNV_OrgNode = _SNV_OrgNode(org_pos, orgNode.chrm, orgNode.pm)
+
+		SNV_OrgNode.Org_parent = orgNode
+		orgNode.SNV_Org_children.append(SNV_OrgNode)
+
+		SNV_OrgNode.SNV_Mut_children.append(SNV_MutNode)
+		SNV_MutNode.SNV_Org_parent = SNV_OrgNode
+		return True
+
 	def deepcopy_(self, other_muts):
 		c = ChrmProf(self.n, self.chrm, self.pm)
 		c.org, muts, other_muts = _deepcopy_org(self.org, other_muts)
 		return c, muts, other_muts
 
-	def inv(self, bgn, end):
+	def inv(self, bgn, end, snv):
 		print("inv",self.chrm, self.pm, bgn,end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
@@ -90,10 +127,12 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 
 		self._rev_mut(bgn, end)
+		if snv:
+			self._rev_mut_snv(bgn, end)
 
 		return True
 
-	def rem(self, bgn, end):
+	def rem(self, bgn, end, snv):
 		print("rem",self.chrm, self.pm, bgn, end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
@@ -116,6 +155,11 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		# remove old nodes from OrgNode children list and delete old nodes
 		while head != None:
 			head.parent.children.remove(head) # remove curent MutNode from children list of OrgNode
+			if snv:
+				for snv_child in head.SNV_Mut_children:
+					snv_child.SNV_Org_parent.remove(snv_child)
+					snv_child.Mut_parent.remove(snv_child)
+					del snv_child
 			prev = head
 			head = head.r
 			del prev
@@ -133,7 +177,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		return True
 
 	###xf: add translocation
-	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1):
+	def trans(self, from_ChrmProf, ins_Pos, bgn1, end1, snv):
 		print('trans', self.chrm + ' ' + str(self.pm), ins_Pos, from_ChrmProf.chrm + ' ' + str(from_ChrmProf.pm), bgn1, end1)
 		if not from_ChrmProf._is_in_bounds(bgn1, end1) or not from_ChrmProf._is_splitable(bgn1, end1):
 			return False
@@ -164,7 +208,6 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		# 	head_ = head_.r
 		# 	del prev
 
-		# decrement bgn and end values for translocated segment end to right
 		seg_len = end1 - bgn1 + 1
 		right = tail_.r
 
@@ -181,10 +224,15 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		if newL != None:
 			newL.r = head_
 		# increment bgn and end values for inserted region and segments to right
+		# decrement bgn and end values for translocated segment end to right
 		while right is not None:
 			right.bgn -= seg_len
 			right.end -= seg_len
+			if snv:
+				for snv_child in right.SNV_Mut_children:
+					snv_child.pos -= seg_len
 			right = right.r
+		# increment bgn and end values for inserted region and segments to right
 		seg_diff = ins_Pos - bgn1
 		head_arc = head_
 		while True:
@@ -192,6 +240,11 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			head_.end += seg_diff
 			head_.chrm = self.chrm
 			head_.pm = self.pm
+			if snv:
+				for snv_child in head_.SNV_Mut_children:
+					snv_child.pos += seg_diff
+					snv_child.chrm = self.chrm
+					snv_child.pm = self.pm
 			if head_ == tail_:
 				break
 			head_ = head_.r
@@ -201,6 +254,9 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		while head_ != None:
 			head_.bgn += seg_len
 			head_.end += seg_len
+			if snv:
+				for snv_child in head_.SNV_Mut_children:
+					snv_child.pos += seg_len
 			head_ = head_.r
 		self.n = self.n + (end1 - bgn1 + 1)
 		from_ChrmProf.n -= (end1 - bgn1 + 1)
@@ -216,13 +272,13 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
-	def amp(self, bgn, end):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
+	def amp(self, bgn, end, snv):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
 		print("amp",self.chrm, self.pm, bgn, end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 
-		insR, head, tail = _copy_from_to(self.mut, bgn, end) # copy list from bgn to end
+		insR, head, tail = _copy_from_to(self.mut, bgn, end, snv) # copy list from bgn to end
 		### xf: copy means copy the whole identity including the parent-children relationship
 		### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL for MutNode
 		insL = insR.r # node to go after tail
@@ -237,6 +293,9 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		while head != None:
 			head.bgn += seg_len
 			head.end += seg_len
+			if snv:
+				for snv_child in head.SNV_Mut_children:
+					snv_child.pos += seg_len
 			head = head.r
 
 		self.n = self.n + (end - bgn + 1)
@@ -271,15 +330,41 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		                     # is is now the number of nucletides in from a node where it should be split
 
 		# split orgNode1 and all its children
-		### split the orgNode with different position according to whether this mutNode is inv or not
+		### xf: split the orgNode with different position according to whether this mutNode is inv or not
 		if splitMut.is_inv:
 			orgNode2 = orgNode1.split(splitMut.end - k - splitMut.bgn + 1)
+			### xf: relink the parent-children relationship for SVs and SNVs
+			temp_children_list = orgNode1.SNV_Org_children.copy()
+			for child in temp_children_list:
+				if child.pos >= splitMut.end - k - splitMut.bgn + 1:
+					child.Org_parent = orgNode2
+					orgNode2.SNV_Org_children.append(child)
+					orgNode1.SNV_Org_children.remove(child)
 		else:
 			orgNode2 = orgNode1.split(k)
+			temp_children_list = orgNode1.SNV_Org_children.copy()
+			for child in temp_children_list:
+				if child.pos >= k:
+					child.Org_parent = orgNode2
+					orgNode2.SNV_Org_children.append(child)
+					orgNode1.SNV_Org_children.remove(child)
 		for mutNode1 in orgNode1.children:
 			mutNode2 = mutNode1.split(k)
 			mutNode2.parent = orgNode2
 			orgNode2.children.append(mutNode2)
+			temp_children_list = mutNode1.SNV_Mut_children
+			if splitMut.is_inv:
+				for mutchild in temp_children_list:
+					if mutchild.pos <= splitMut.bgn + k - 1:
+						mutchild.Mut_parent = mutNode2
+						mutNode2.SNV_mut_children.append(mutchild)
+						mutNode1.SNV_Mut_children.remove(mutchild)
+			else:
+				for mutchild in temp_children_list:
+					if mutchild.pos >= splitMut.bgn + k:
+						mutchild.Mut_parent = mutNode2
+						mutNode2.SNV_Mut_children.append(mutchild)
+						mutNode1.SNV_Mut_children.remove(mutchild)
 
 	def _is_in_bounds(self, bgn, end):
 		n = self.n
@@ -311,6 +396,13 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				return cur.parent
 			cur = cur.r
 		return None
+
+	def _rev_mut_snv(self, bgn, end):
+		cur = self.mut
+		while cur != None and cur.bgn != bgn: # node with bgn should exist
+			cur = cur.r
+		for snvMut in cur.SNV_Mut_children:
+			snvMut.pos = bgn + end - snvMut.pos
 
 	# reverses doubly linked list starting from node with bgn of bgn to node with end of end
 	def _rev_mut(self, bgn, end):
@@ -376,10 +468,34 @@ class _Node:
 	def get_pos_str(self):
 		return '[' + str(self.bgn) + ',' + str(self.end) + ']'
 
+### xf: add class for SNV nodes:
+class _SNV_MutNode:
+	def __init__(self, pos, chromosome, pm):
+		self.Mut_parent = None
+		self.SNV_Org_parent = None
+		self.pos = pos
+		self.chrm = chromosome
+		self.pm = pm
+
+	def copy(self):
+		return _SNV_MutNode(self.pos, self.chrm, self.pos)
+
+class _SNV_OrgNode:
+	def __init__(self, pos, chromosome, pm):
+		self.Org_parent = None
+		self.SNV_Mut_children = []
+		self.pos = pos
+		self.chrm = chromosome
+		self.pm = pm
+
+	def copy(self):
+		return _SNV_OrgNode(self.pos, self.chrm, self.pos)
+
 
 class _OrgNode(_Node): ### xf: OrgNode is a single node which will be splitted during mutation. It will be linked to multiple MutNodes for mapping.
 	def __init__(self, bgn, end, chromosome, pm):
 		self.children = [] # no mutated sections
+		self.SNV_Org_children = []
 		self.l = None      # no left or right pointers
 		self.r = None
 		self.bgn = bgn
@@ -401,9 +517,11 @@ class _OrgNode(_Node): ### xf: OrgNode is a single node which will be splitted d
 	def copy(self):
 		return _OrgNode(self.bgn, self.end, self.chrm, self.pm)
 
+
 class _MutNode(_Node):
 	def __init__(self, bgn, end, chromosome, pm, is_inv = False):
 		self.parent = None
+		self.SNV_Mut_children = []
 		self.l = None
 		self.r = None
 		self.bgn = bgn
@@ -476,7 +594,7 @@ def _is_already_mut_end(cur, end):
 
 # fm (int) is bgn index of one of the nodes. to (int) is end of one of the nodes
 ### xf: head means the current start MutNode
-def _copy_from_to(head, fm, to):
+def _copy_from_to(head, fm, to, snv):
 	oldhead = head
 	while head != None and head.bgn != fm: # make head the beginning of where to copy
 		head = head.r
@@ -487,6 +605,13 @@ def _copy_from_to(head, fm, to):
 	while curA != None:
 		curB = copy.copy(curA)
 		curB.parent.children.append(curB) # update parent's children pointers
+		if snv:
+			for snv_child in curA.SNV_Mut_children:
+				mutB = copy.copy(snv_child)
+				mutB.SNV_Org_parent = snv_child.SNV_Org_parent
+				snv_child.SNV_Org_parent.SNV_Mut_children.append(mutB)
+				curB.SNV_Mut_children.append(mutB)
+				mutB.Mut_parent = snv_child.Mut_parent
 		if i == 0:
 			headB = curB
 			i += 1
@@ -553,6 +678,11 @@ def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
 	isAdj = (abs(curPos - matePos) == 1 and curOrgNode.chrm == mateOrgNode.chrm and curOrgNode.pm == mateOrgNode.pm)
 
 	return matePos, isLeft, isAdj, mateOrgNode.chrm, mateOrgNode.pm
+
+
+def _get_org_pos_snv(snv_MutNode):
+	return snv_MutNode.SNV_Org_parent.pos
+
 
 # node (MuteNode), isBgn (bool) True if considering left pos on mutant. returns position of org node
 def _get_org_pos(node, isBgn):

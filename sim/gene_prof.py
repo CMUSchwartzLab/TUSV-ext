@@ -98,6 +98,12 @@ class GeneProf:
 
 		return mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos
 
+	def random_mutation_snv(self):
+		mut_num = np.random.poisson(self.constants_dict["snv_mut_lambda"])
+		mut_chr = random.choice(list(self.chrom_dict.keys()), size=mut_num)
+		mut_pos = np.random.randint(0, self.chrom_dict[mut_chr].n, size=mut_num)
+		return mut_num, mut_chr, mut_pos
+
 	def is_legal_trans(self, chr1, ins_Pos, chr2, bgn, end):
 		if chr1 == chr2 and bgn <= ins_Pos <= end:
 			return False
@@ -135,19 +141,19 @@ class GeneProf:
 
 
     # make a single mutation ###xf: lack translocation
-	def mutate(self, geneprof_list):
+	def mutate(self, geneprof_list, snv):
 
 		mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos = self.get_legal_random_mutation(geneprof_list)
 		# print 'mut_type:', mut_type, 'mut_chr:', mut_chr, 'mut_size:', mut_size, 'mut_bgnPos:', mut_bgnPos, 'mut_endPos:', mut_endPos
 
 		if mut_type == 'amp':
-			self.chrom_dict[mut_chr].amp(mut_bgnPos, mut_endPos)
+			self.chrom_dict[mut_chr].amp(mut_bgnPos, mut_endPos, snv)
 
 		elif mut_type == 'rem':
-			self.chrom_dict[mut_chr].rem(mut_bgnPos, mut_endPos)
+			self.chrom_dict[mut_chr].rem(mut_bgnPos, mut_endPos, snv)
 
 		elif mut_type == 'inv':
-			self.chrom_dict[mut_chr].inv(mut_bgnPos, mut_endPos)
+			self.chrom_dict[mut_chr].inv(mut_bgnPos, mut_endPos, snv)
 
 		elif mut_type == 'trans':
 			mut_chr2 = random.choice(list(self.chrom_dict.keys()))
@@ -155,15 +161,23 @@ class GeneProf:
 			while not self.is_legal_trans(mut_chr, ins_Pos, mut_chr2, mut_bgnPos, mut_endPos):
 				mut_chr2 = random.choice(list(self.chrom_dict.keys()))
 				ins_Pos = random.randint(0, self.chrom_dict[mut_chr2].n)
-			self.chrom_dict[mut_chr] = self.chrom_dict[mut_chr2].trans(self.chrom_dict[mut_chr], ins_Pos, mut_bgnPos, mut_endPos)
+			self.chrom_dict[mut_chr] = self.chrom_dict[mut_chr2].trans(self.chrom_dict[mut_chr], ins_Pos, mut_bgnPos, mut_endPos, snv)
 
 		self.copy_num_dict = self.get_copy_nums_dict()
 		self.mutCount += 1
 
     # make multiple mutations 
 	def multi_mutations(self, geneprof_list):
+		if self.constants_dict['snv_mut_lambda'] is not None:
+			snv=True
+		else:
+			snv=False
 		while self.mutCount < self.maxCount:
-			self.mutate(geneprof_list)
+			self.mutate(geneprof_list, snv)
+		if self.constants_dict['snv_mut_lambda'] is not None:
+			mut_num_snv, mut_chr_snv, mut_pos_snv = self.random_mutation_snv()
+			for i in range(mut_num_snv):
+				self.chrom_dict[mut_chr_snv[i]].point_mutation(mut_pos_snv[i])
 
 
     # copy_num_dict: dictionary
@@ -206,6 +220,12 @@ class GeneProf:
 		for (idx,pm) in l:
 			print '(', idx, ',', pm, '): ', self.chrom_dict[(idx,pm)].chrm
 
+	### xf: add get snv dict
+	def get_snv_dict(self):
+		snvs = dict()
+		for (idx, pm) in self.chrom_dict:
+			snvs = self.chrom_dict[(idx, pm)].get_snvs(snvs)
+		return snvs
 
 	# input: cov (int), read_len (int)
 	# output: sv_dict

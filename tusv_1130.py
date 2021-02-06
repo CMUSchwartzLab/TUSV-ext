@@ -85,8 +85,8 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
     if should_overide_lambdas:
         m = len(F)
         l, r = Q.shape
-        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )
-        lamb2 = float(l + 2*r) / float(l)
+        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )/2
+        lamb2 = float(l + 2*r) / float(l)/2
 
     Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
     num_complete = 0
@@ -126,8 +126,8 @@ def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should
     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
     if should_overide_lambdas:
 
-        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))
-        lamb2 = float(l + 2*r) / float(l)
+        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))/2
+        lamb2 = float(l + 2*r) / float(l)/2
 
     F_seg = F[:, l:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
     Pi = np_divide_0(F[:, :l], F_seg)

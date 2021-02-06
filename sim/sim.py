@@ -6,6 +6,9 @@
 #  input: m, n, lambda, mu, outdir
 #  output: u.tsv, c.tsv, t.dot, sample.vcf
 
+#  co-author: Xuecong Fu
+#  modified: 2021.1-3
+
 ##########
 # Import #
 ##########
@@ -51,6 +54,7 @@ def main(argv):
 	m = args['m']
 	n = args['n']
 	num_mutes = args['num_mutes']
+	num_mutes_snv = args['num_mutes_snv']
 	num_patients = args['num_patients']
 	
 	directory = os.path.dirname(os.path.realpath(__file__))
@@ -68,6 +72,10 @@ def main(argv):
 	constants_dict['mut_types'] = ['amp', 'inv', 'rem','trans']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
+	if num_mutes_snv is not None:
+		constants_dict['snv_mut_lambda'] = num_mutes_snv / (2*n - 2)
+	else:
+		constants_dict['snv_mut_lambda'] = None
 	constants_dict['cov'] = 20
 	constants_dict['read_len'] = 300
 	constants_dict['num_patients'] = num_patients
@@ -85,50 +93,50 @@ def main(argv):
 
 	chrom_dict[('1', 0)] = chpr.ChrmProf(249198692, '1', 0) #from ICGC CNV data
 	chrom_dict[('1', 1)] = chpr.ChrmProf(249198692, '1', 1)
-	chrom_dict[('2', 0)] = chpr.ChrmProf(243048760, '2', 0)
-	chrom_dict[('2', 1)] = chpr.ChrmProf(243048760, '2', 1)
-	chrom_dict[('3', 0)] = chpr.ChrmProf(197856433, '3', 0)
-	chrom_dict[('3', 1)] = chpr.ChrmProf(197856433, '3', 1)
-	chrom_dict[('4', 0)] = chpr.ChrmProf(190921709, '4', 0)
-	chrom_dict[('4', 1)] = chpr.ChrmProf(190921709, '4', 1)
-	chrom_dict[('5', 0)] = chpr.ChrmProf(186092833, '5', 0)
-	chrom_dict[('5', 1)] = chpr.ChrmProf(186092833, '5', 1)
-	chrom_dict[('6', 0)] = chpr.ChrmProf(170918031, '6', 0)
-	chrom_dict[('6', 1)] = chpr.ChrmProf(170918031, '6', 1)
-	chrom_dict[('7', 0)] = chpr.ChrmProf(159119220, '7', 0)
-	chrom_dict[('7', 1)] = chpr.ChrmProf(159119220, '7', 1)
-	chrom_dict[('8', 0)] = chpr.ChrmProf(146293414, '8', 0)
-	chrom_dict[('8', 1)] = chpr.ChrmProf(146293414, '8', 1)
-	chrom_dict[('9', 0)] = chpr.ChrmProf(141071475, '9', 0)
-	chrom_dict[('9', 1)] = chpr.ChrmProf(141071475, '9', 1)
-	chrom_dict[('10', 0)] = chpr.ChrmProf(135434551, '10', 0)
-	chrom_dict[('10', 1)] = chpr.ChrmProf(135434551, '10', 1)
-	chrom_dict[('11', 0)] = chpr.ChrmProf(134944770, '11', 0)
-	chrom_dict[('11', 1)] = chpr.ChrmProf(134944770, '11', 1)
-	chrom_dict[('12', 0)] = chpr.ChrmProf(133777645, '12', 0)
-	chrom_dict[('12', 1)] = chpr.ChrmProf(133777645, '12', 1)
-	chrom_dict[('13', 0)] = chpr.ChrmProf(115106996, '13', 0)
-	chrom_dict[('13', 1)] = chpr.ChrmProf(115106996, '13', 1)
-	chrom_dict[('14', 0)] = chpr.ChrmProf(107285437, '14', 0)
-	chrom_dict[('14', 1)] = chpr.ChrmProf(107285437, '14', 1)
-	chrom_dict[('15', 0)] = chpr.ChrmProf(102400037, '15', 0)
-	chrom_dict[('15', 1)] = chpr.ChrmProf(102400037, '15', 1)
-	chrom_dict[('16', 0)] = chpr.ChrmProf(90163275, '16', 0)
-	chrom_dict[('16', 1)] = chpr.ChrmProf(90163275, '16', 1)
-	chrom_dict[('17', 0)] = chpr.ChrmProf(81048659, '17', 0)
-	chrom_dict[('17', 1)] = chpr.ChrmProf(81048659, '17', 1)
-	chrom_dict[('18', 0)] = chpr.ChrmProf(78015057, '18', 0)
-	chrom_dict[('18', 1)] = chpr.ChrmProf(78015057, '18', 1)
-	chrom_dict[('19', 0)] = chpr.ChrmProf(59095126, '19', 0)
-	chrom_dict[('19', 1)] = chpr.ChrmProf(59095126, '19', 1)
-	chrom_dict[('20', 0)] = chpr.ChrmProf(62912463, '20', 0)
-	chrom_dict[('20', 1)] = chpr.ChrmProf(62912463, '20', 1)
-	chrom_dict[('21', 0)] = chpr.ChrmProf(48084820, '21', 0)
-	chrom_dict[('21', 1)] = chpr.ChrmProf(48084820, '21', 1)
-	chrom_dict[('22', 0)] = chpr.ChrmProf(51219006, '22', 0)
-	chrom_dict[('22', 1)] = chpr.ChrmProf(51219006, '22', 1)
-	chrom_dict[('23', 0)] = chpr.ChrmProf(155233846, '23', 0)
-	chrom_dict[('23', 1)] = chpr.ChrmProf(155233846, '23', 1)
+	# chrom_dict[('2', 0)] = chpr.ChrmProf(243048760, '2', 0)
+	# chrom_dict[('2', 1)] = chpr.ChrmProf(243048760, '2', 1)
+	# chrom_dict[('3', 0)] = chpr.ChrmProf(197856433, '3', 0)
+	# chrom_dict[('3', 1)] = chpr.ChrmProf(197856433, '3', 1)
+	# chrom_dict[('4', 0)] = chpr.ChrmProf(190921709, '4', 0)
+	# chrom_dict[('4', 1)] = chpr.ChrmProf(190921709, '4', 1)
+	# chrom_dict[('5', 0)] = chpr.ChrmProf(186092833, '5', 0)
+	# chrom_dict[('5', 1)] = chpr.ChrmProf(186092833, '5', 1)
+	# chrom_dict[('6', 0)] = chpr.ChrmProf(170918031, '6', 0)
+	# chrom_dict[('6', 1)] = chpr.ChrmProf(170918031, '6', 1)
+	# chrom_dict[('7', 0)] = chpr.ChrmProf(159119220, '7', 0)
+	# chrom_dict[('7', 1)] = chpr.ChrmProf(159119220, '7', 1)
+	# chrom_dict[('8', 0)] = chpr.ChrmProf(146293414, '8', 0)
+	# chrom_dict[('8', 1)] = chpr.ChrmProf(146293414, '8', 1)
+	# chrom_dict[('9', 0)] = chpr.ChrmProf(141071475, '9', 0)
+	# chrom_dict[('9', 1)] = chpr.ChrmProf(141071475, '9', 1)
+	# chrom_dict[('10', 0)] = chpr.ChrmProf(135434551, '10', 0)
+	# chrom_dict[('10', 1)] = chpr.ChrmProf(135434551, '10', 1)
+	# chrom_dict[('11', 0)] = chpr.ChrmProf(134944770, '11', 0)
+	# chrom_dict[('11', 1)] = chpr.ChrmProf(134944770, '11', 1)
+	# chrom_dict[('12', 0)] = chpr.ChrmProf(133777645, '12', 0)
+	# chrom_dict[('12', 1)] = chpr.ChrmProf(133777645, '12', 1)
+	# chrom_dict[('13', 0)] = chpr.ChrmProf(115106996, '13', 0)
+	# chrom_dict[('13', 1)] = chpr.ChrmProf(115106996, '13', 1)
+	# chrom_dict[('14', 0)] = chpr.ChrmProf(107285437, '14', 0)
+	# chrom_dict[('14', 1)] = chpr.ChrmProf(107285437, '14', 1)
+	# chrom_dict[('15', 0)] = chpr.ChrmProf(102400037, '15', 0)
+	# chrom_dict[('15', 1)] = chpr.ChrmProf(102400037, '15', 1)
+	# chrom_dict[('16', 0)] = chpr.ChrmProf(90163275, '16', 0)
+	# chrom_dict[('16', 1)] = chpr.ChrmProf(90163275, '16', 1)
+	# chrom_dict[('17', 0)] = chpr.ChrmProf(81048659, '17', 0)
+	# chrom_dict[('17', 1)] = chpr.ChrmProf(81048659, '17', 1)
+	# chrom_dict[('18', 0)] = chpr.ChrmProf(78015057, '18', 0)
+	# chrom_dict[('18', 1)] = chpr.ChrmProf(78015057, '18', 1)
+	# chrom_dict[('19', 0)] = chpr.ChrmProf(59095126, '19', 0)
+	# chrom_dict[('19', 1)] = chpr.ChrmProf(59095126, '19', 1)
+	# chrom_dict[('20', 0)] = chpr.ChrmProf(62912463, '20', 0)
+	# chrom_dict[('20', 1)] = chpr.ChrmProf(62912463, '20', 1)
+	# chrom_dict[('21', 0)] = chpr.ChrmProf(48084820, '21', 0)
+	# chrom_dict[('21', 1)] = chpr.ChrmProf(48084820, '21', 1)
+	# chrom_dict[('22', 0)] = chpr.ChrmProf(51219006, '22', 0)
+	# chrom_dict[('22', 1)] = chpr.ChrmProf(51219006, '22', 1)
+	# chrom_dict[('23', 0)] = chpr.ChrmProf(155233846, '23', 0)
+	# chrom_dict[('23', 1)] = chpr.ChrmProf(155233846, '23', 1)
 
 	# sub_folder_name = 'n_' + str(n) + '_m_' + str(m) + '_l_' + str(num_mutes)
 	if not os.path.exists(output_folder):
@@ -168,7 +176,11 @@ def main(argv):
 		l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(t, n, constants_dict)
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
 		### xf: combine the segment settings from both two alleles and also different node from mutations
-		C = generate_c(t, n, constants_dict)
+		if constants_dict['snv_mut_lambda'] is None:
+			C = generate_c(t, n, constants_dict)
+		else:
+			g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(t)
+			C = generate_c_snv(t, n, constants_dict)
 
 		c_p, c_m = generate_seg_cp_paternal(t, n)
 
@@ -321,6 +333,20 @@ def random_get_usages(m, n):
 		a = np.concatenate((a, b), axis = 0)
 	return a
 
+### xf: add snv copy number idx dict
+def get_snv_copy_num_idx_dict(tree):
+	d = set()
+	for idx in tree.node_list:
+		temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
+
+		for tuple in temp_snv_dict.keys():
+				if tuple not in d:
+					d.add(tuple)
+	sorted_d = list(d).sort(key=lambda x: (x[0], x[1]))
+
+	return len(list(d)), sorted_d
+
+
 
 # input a tree (Tree object) and n (number of leaf nodes)
 # output a l (number of bps) and a dictionary
@@ -421,6 +447,7 @@ def generate_c(tree, n, constants_dict):
 	l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(tree, n, constants_dict)
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 
+
 	c = make_2d_list(len(tree.node_list), (l + 2*r))
 	for idx in tree.node_list:
 		row = idx - 1
@@ -452,6 +479,48 @@ def generate_c(tree, n, constants_dict):
 	result = np.array(c)
 	return result
 
+
+### xf: add generate c when snv is required
+def generate_c_snv(tree, n, constants_dict):
+
+	l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(tree, n, constants_dict)
+	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
+	g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(tree)
+
+
+
+	c = make_2d_list(len(tree.node_list), (l + 2 * g + 2 * r))
+	for idx in tree.node_list:
+		row = idx - 1
+		# add copy number for break points
+		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'],
+																			  constants_dict['read_len'])
+		for chrom in temp_bp_dict:
+			for (pos, isLeft, chr_,) in temp_bp_dict[chrom]:
+				cp = temp_bp_dict[chrom][(pos, isLeft, chr_)]["copy_num"]
+				col = sv_cn_idx_dict[chrom][(pos, isLeft, chr_)]
+				c[row][col] = cp
+
+		# add copy number for segments
+		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
+		for chrom in temp_copy_nums_dict:
+			(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
+			for i in range(len(bgns)):
+				cp1 = cps1[i]
+				cp2 = cps2[i]
+				# if float(cp1) > float(cp2):  ### xf: make sure the copy numbers are in the order of minor, major
+				# temp = cp1
+				# cp1 = cp2
+				# cp2 = temp
+				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]),
+														   (chrom, ends[i]))
+				for j in range(len(seg_indices_list)):
+					col = seg_indices_list[j] + l
+					c[row][col] = cp1
+					c[row][col + r] = cp2
+
+	result = np.array(c)
+	return result
 
 # given start and end position, output list of segment indices (continuous)
 # s = (chrom, bgn_pos), e = (chrom, end_pos)
@@ -558,6 +627,10 @@ def get_cnv_rec_id(cnv_idx, r):
 def get_sv_rec_id(sv_idx, l):
 	return 'sv' + str(sv_idx).zfill(len(str(l)))
 
+### xf: add for snv
+def get_snv_rec_id(snv_idx, g):
+	return 'snv' + str(snv_idx).zfill(len(str(g)))
+
 
 # a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 # generate a vcf file for each sample
@@ -637,12 +710,22 @@ def generate_cnv(chrm, pos, rec_id, alt_type, info_end, gt, cn):
 	return newRec
 
 
+def generate_snv(chrm, pos, rec_id):
+	ref = '.'
+
+	return
+
+
 def is_cnv_record(rec):
 	return rec.ID[0:3] == 'cnv'
 
 
 def is_sv_record(rec):
 	return rec.ID[0:2] == 'sv'
+
+
+def is_snv_record(rec):
+	return rec.ID[0:3] == 'snv'
 
 
 #########
@@ -758,6 +841,8 @@ class Tree:
 			curr_gp_copied_left.mutCount, curr_gp_copied_left.maxCount = 0, curr_gp_copied_left.get_mut_count() ### xf: get_mut_count: random.poisson(exp_mut_rate)
 
 			curr_gp_copied_left.multi_mutations(geneprof_list) ### xf: generate multiple mutations
+
+
 			node.left.geneProf = curr_gp_copied_left
 			self.add_mutations_along_edges(node.left, geneprof_list)
 
@@ -814,6 +899,7 @@ def get_args(argv):
 	parser.add_argument('-m', '--num_samples', type = int, dest = "m", required = True)
 	parser.add_argument('-n', '--num_leaves', type = int, dest = "n", required = True)
 	parser.add_argument('-c', '--total_number_of_mutations', type = int, dest = "num_mutes", required = True)
+	parser.add_argument('-cs', '--total_number_of_mutations_snv', type=int, dest="num_mutes_snv", required=True)
 	parser.add_argument('-s', '--expect_mut_len', type = int, dest = "size_mutes", required = True)
 	parser.add_argument('-o', '--output_folder', type = str, dest = "output_folder", required = True)
 	parser.add_argument('-p', '--num_patients', type=int, dest="num_patients", default=5)
