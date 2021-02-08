@@ -272,33 +272,33 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
-	def amp(self, bgn, end, snv):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
+	def amp(self, bgn, end, amp_num, snv):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
 		print("amp",self.chrm, self.pm, bgn, end)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
+		for i_amp in range(amp_num):
+			insR, head, tail = _copy_from_to(self.mut, bgn, end, snv) # copy list from bgn to end
+			### xf: copy means copy the whole identity including the parent-children relationship
+			### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL for MutNode
+			insL = insR.r # node to go after tail
+			insR.r = head
+			head.l = insR
+			tail.r = insL
+			if insL != None:
+				insL.l = tail
 
-		insR, head, tail = _copy_from_to(self.mut, bgn, end, snv) # copy list from bgn to end
-		### xf: copy means copy the whole identity including the parent-children relationship
-		### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL for MutNode
-		insL = insR.r # node to go after tail
-		insR.r = head
-		head.l = insR
-		tail.r = insL
-		if insL != None:
-			insL.l = tail
+			# increment bgn and end values for inserted region and segments to right
+			seg_len = end - bgn + 1
+			while head != None:
+				head.bgn += seg_len
+				head.end += seg_len
+				if snv:
+					for snv_child in head.SNV_Mut_children:
+						snv_child.pos += seg_len
+				head = head.r
 
-		# increment bgn and end values for inserted region and segments to right
-		seg_len = end - bgn + 1
-		while head != None:
-			head.bgn += seg_len
-			head.end += seg_len
-			if snv:
-				for snv_child in head.SNV_Mut_children:
-					snv_child.pos += seg_len
-			head = head.r
-
-		self.n = self.n + (end - bgn + 1)
+			self.n = self.n + (end - bgn + 1)
 		return True
 
 	# split bgn and end positions if needed. do not need to split at start or terminal of chromosome

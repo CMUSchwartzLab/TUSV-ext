@@ -147,7 +147,8 @@ class GeneProf:
 		# print 'mut_type:', mut_type, 'mut_chr:', mut_chr, 'mut_size:', mut_size, 'mut_bgnPos:', mut_bgnPos, 'mut_endPos:', mut_endPos
 
 		if mut_type == 'amp':
-			self.chrom_dict[mut_chr].amp(mut_bgnPos, mut_endPos, snv)
+			amp_num = np.random.randint(1, 8)
+			self.chrom_dict[mut_chr].amp(mut_bgnPos, mut_endPos, amp_num, snv)
 
 		elif mut_type == 'rem':
 			self.chrom_dict[mut_chr].rem(mut_bgnPos, mut_endPos, snv)
