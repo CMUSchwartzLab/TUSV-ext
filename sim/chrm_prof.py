@@ -548,7 +548,7 @@ def _get_mated_pos(cur, isBgn): ### xf: find out any breakpoint 123|124
 	matePos, mateOrgNode = _get_org_pos(mate, not isBgn)
 
 	isLeft = isBgn
-	if cur.is_inv:
+	if mate.is_inv:
 		isLeft = not isBgn
 	isAdj = (abs(curPos - matePos) == 1 and curOrgNode.chrm == mateOrgNode.chrm and curOrgNode.pm == mateOrgNode.pm)
 
