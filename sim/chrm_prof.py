@@ -239,7 +239,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				head.end += seg_len
 				head = head.r
 
-		self.n = self.n + (end - bgn + 1)
+			self.n = self.n + (end - bgn + 1)
 		return True
 
 	# split bgn and end positions if needed. do not need to split at start or terminal of chromosome
