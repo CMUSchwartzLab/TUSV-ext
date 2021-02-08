@@ -439,10 +439,10 @@ def generate_c(tree, n, constants_dict):
 			for i in range(len(bgns)):
 				cp1 = cps1[i]
 				cp2 = cps2[i]
-				#if float(cp1) > float(cp2):  ### xf: make sure the copy numbers are in the order of minor, major
-					#temp = cp1
-					#cp1 = cp2
-					#cp2 = temp
+				if float(cp1) > float(cp2):  ### xf: make sure the copy numbers are in the order of minor, major
+					temp = cp1
+					cp1 = cp2
+					cp2 = temp
 				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
 				for j in range(len(seg_indices_list)):
 					col = seg_indices_list[j] + l
