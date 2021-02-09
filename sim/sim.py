@@ -177,7 +177,7 @@ def main(argv):
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
 		### xf: combine the segment settings from both two alleles and also different node from mutations
 		if constants_dict['snv_mut_lambda'] is None:
-			C = generate_c(t, n, constants_dict)
+			C = generate_c(t, n, constants_dict,)
 		else:
 			g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(t)
 			C = generate_c_snv(t, n, constants_dict)
@@ -336,15 +336,18 @@ def random_get_usages(m, n):
 ### xf: add snv copy number idx dict
 def get_snv_copy_num_idx_dict(tree):
 	d = set()
+	d2 = {}
 	for idx in tree.node_list:
 		temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
 
 		for tuple in temp_snv_dict.keys():
 				if tuple not in d:
 					d.add(tuple)
-	sorted_d = list(d).sort(key=lambda x: (x[0], x[1]))
+	sorted_d = sorted(list(d),key=lambda x: (x[0], x[1]))
+	for k in range(len(sorted_d)):
+		d2[sorted_d[k]] = k
 
-	return len(list(d)), sorted_d
+	return len(list(d)), sorted_d, d2
 
 
 
@@ -437,6 +440,51 @@ def make_2d_list(rows, cols):
 		result.append([0] * cols)
 	return result
 
+
+def generate_c_snv(tree, n, constants_dict, bool_list, subsample=0.001):
+
+	l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(tree, n, constants_dict)
+	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
+	g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(tree)
+
+	g_sample = int(g*subsample)
+	snv_sampled_idx =np.random.choice(g, size=g_sample, replace=False)
+	snv_unsampled_idx = np.setdiff1d(np.arange(g), snv_sampled_idx)
+
+	c = make_2d_list(len(tree.node_list), (l + g_sample + 2*r))
+	for idx in tree.node_list:
+		row = idx - 1
+		# add copy number for break points
+		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
+		for chrom in temp_bp_dict:
+			for (pos, isLeft, chr_,) in temp_bp_dict[chrom]:
+				cp = temp_bp_dict[chrom][(pos, isLeft, chr_)]["copy_num"]
+				col = sv_cn_idx_dict[chrom][(pos, isLeft, chr_)]
+				c[row][col] = cp
+
+		temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
+		for chrom in temp_snv_dict:
+			for (pos, )
+
+		# add copy number for segments
+		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
+		for chrom in temp_copy_nums_dict:
+			(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
+			for i in range(len(bgns)):
+				cp1 = cps1[i]
+				cp2 = cps2[i]
+				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
+				for j in range(len(seg_indices_list)):
+					col = seg_indices_list[j] + l + g_sample
+					if bool_list[col-l-g_sample]:
+						c[row][col] = cp1
+						c[row][col + r] = cp2
+					else:
+						c[row][col] = cp2
+						c[row][col + r] = cp1
+
+	result = np.array(c)
+	return result
 
 # loop through each node in tree(Tree), 
 # for each treeNode: use self.get_copy_nums_dict() to get bgns, ends, cps list for each chromosomes
