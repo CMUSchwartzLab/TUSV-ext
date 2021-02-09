@@ -168,9 +168,10 @@ def main(argv):
 		l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(t, n, constants_dict)
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
 		### xf: combine the segment settings from both two alleles and also different node from mutations
-		C = generate_c(t, n, constants_dict)
+		bool_list = np.random.choice([True, False], r)
+		C = generate_c(t, n, constants_dict, bool_list)
 
-		c_p, c_m = generate_seg_cp_paternal(t, n)
+		c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
 
 		F = generate_f(U, C)
 
@@ -416,12 +417,13 @@ def make_2d_list(rows, cols):
 # for each treeNode: use self.get_copy_nums_dict() to get bgns, ends, cps list for each chromosomes
 #                    use self.get_sv_read_nums_dict(cov, read_len) to get bps and their corresponding information for each chromosomes
 # output c ((2n-1)*(l+r) matrix) ### xf: --> (2n-1)*(l+2r)
-def generate_c(tree, n, constants_dict):
+def generate_c(tree, n, constants_dict, bool_list):
 
 	l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(tree, n, constants_dict)
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 
 	c = make_2d_list(len(tree.node_list), (l + 2*r))
+
 	for idx in tree.node_list:
 		row = idx - 1
 		# add copy number for break points
@@ -439,15 +441,15 @@ def generate_c(tree, n, constants_dict):
 			for i in range(len(bgns)):
 				cp1 = cps1[i]
 				cp2 = cps2[i]
-				if float(cp1) > float(cp2):  ### xf: make sure the copy numbers are in the order of minor, major
-					temp = cp1
-					cp1 = cp2
-					cp2 = temp
 				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
 				for j in range(len(seg_indices_list)):
 					col = seg_indices_list[j] + l
-					c[row][col] = cp1
-					c[row][col + r] = cp2
+					if bool_list[col-l]:
+						c[row][col] = cp1
+						c[row][col + r] = cp2
+					else:
+						c[row][col] = cp2
+						c[row][col + r] = cp1
 
 	result = np.array(c)
 	return result
@@ -466,7 +468,7 @@ def get_indices_for_segment(bgn2idx, end2idx, s, e):
 
 # return a ((2n-1) * r) matrix contains paternal chrom copy number for each segment
 # and a ((2n-1) * r) matrix contains maternal chrom copy number for each segment
-def generate_seg_cp_paternal(tree, n):
+def generate_seg_cp_paternal(tree, n, bool_list):
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 	c_p = make_2d_list(len(tree.node_list), r)
 	c_m = make_2d_list(len(tree.node_list), r)
@@ -480,7 +482,10 @@ def generate_seg_cp_paternal(tree, n):
 				cp = cps[i]
 				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom[0], bgns[i]), (chrom[0], ends[i]))
 				for col in seg_indices_list:
-					c_p[row][col] = cp
+					if bool_list[col]:
+						c_p[row][col] = cp
+					else:
+						c_m[row][col] = cp
 
 		for chrom in list(filter(lambda x: x[1] == 1, temp_chrom_dict.keys())):
 			(bgns, ends, cps) = temp_chrom_dict[chrom].get_copy_nums()
@@ -488,7 +493,10 @@ def generate_seg_cp_paternal(tree, n):
 				cp = cps[i]
 				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom[0], bgns[i]), (chrom[0], ends[i]))
 				for col in seg_indices_list:
-					c_m[row][col] = cp
+					if bool_list[col]:
+						c_m[row][col] = cp
+					else:
+						c_p[row][col] = cp
 	return c_p, c_m
 
 
