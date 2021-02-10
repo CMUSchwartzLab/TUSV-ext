@@ -83,8 +83,8 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				snv_org = snv_mut.SNV_Org_parent
 				snv_tuple = (snv_org.chrm, snv_org.pos)
 				if snv_tuple not in snvs.keys():
-					snvs[snv_tuple] = {'cn': 0}
-				snvs[snv_tuple]['cn'] += 1
+					snvs[snv_tuple] = {'copy_num': 0}
+				snvs[snv_tuple]['copy_num'] += 1
 			cur = cur.r
 		return snvs
 

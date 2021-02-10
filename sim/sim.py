@@ -177,22 +177,31 @@ def main(argv):
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
 		### xf: combine the segment settings from both two alleles and also different node from mutations
 		if constants_dict['snv_mut_lambda'] is None:
-			C = generate_c(t, n, constants_dict,)
+			C = generate_c(t, n, constants_dict, bool_list)
+			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
+			F = generate_f(U, C)
+			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
+			generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C,
+					   c_p, c_m, a, h, mate_dict, outputFolder)
+			output_tsv(U, '/U.tsv', outputFolder)
+			output_tsv(C, '/C.tsv', outputFolder)
+			output_tsv(F, '/F.tsv', outputFolder)
+
 		else:
 			g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(t)
-			C = generate_c_snv(t, n, constants_dict)
-
-		c_p, c_m = generate_seg_cp_paternal(t, n)
-
-		F = generate_f(U, C)
-
-		a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
-
-		output_tsv(U, '/U.tsv', outputFolder)
-		output_tsv(C, '/C.tsv', outputFolder)
-		output_tsv(F, '/F.tsv', outputFolder)
-
-		generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C, c_p, c_m, a, h, mate_dict, outputFolder)
+			C, C_unsampled_snv, snv_sampled_idx, snv_unsampled_idx = generate_c_snv(t, n, constants_dict, bool_list)
+			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
+			F = generate_f(U, C)
+			F_unsampled_snv = generate_f(U, C_unsampled_snv)
+			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
+			generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx,
+					   snv_unsampled_idx, seg_bgn_idx_dict, seg_end_idx_dict, F,
+					   F_unsampled_snv, U, C, c_p, c_m, a, h, mate_dict, outputFolder)
+			output_tsv(U, '/U.tsv', outputFolder)
+			output_tsv(C, '/C.tsv', outputFolder)
+			output_tsv(F, '/F.tsv', outputFolder)
+			output_tsv(F_unsampled_snv, 'F_unsampled_snv.tsv', outputFolder)
+			output_tsv(C_unsampled_snv, 'C_unsampled_snv.tsv', outputFolder)
 
 		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
 		pickle.dump(edge_list, edge_list_pickle)
@@ -347,7 +356,7 @@ def get_snv_copy_num_idx_dict(tree):
 	for k in range(len(sorted_d)):
 		d2[sorted_d[k]] = k
 
-	return len(list(d)), sorted_d, d2
+	return len(list(d)), d2
 
 
 
@@ -448,10 +457,11 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample=0.001):
 	g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(tree)
 
 	g_sample = int(g*subsample)
-	snv_sampled_idx =np.random.choice(g, size=g_sample, replace=False)
+	snv_sampled_idx = np.sort(np.random.choice(g, size=g_sample, replace=False))
 	snv_unsampled_idx = np.setdiff1d(np.arange(g), snv_sampled_idx)
 
 	c = make_2d_list(len(tree.node_list), (l + g_sample + 2*r))
+	c_unsampled_snv = make_2d_list(len(tree.node_list), (g-g_sample))
 	for idx in tree.node_list:
 		row = idx - 1
 		# add copy number for break points
@@ -463,8 +473,15 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample=0.001):
 				c[row][col] = cp
 
 		temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
-		for chrom in temp_snv_dict:
-			for (pos, )
+		for (chrm, pos) in temp_snv_dict.keys():
+			if snv_cn_idx_dict[(chrm, pos)] in snv_sampled_idx:
+				cp = temp_snv_dict[(chrm, pos)]["copy_num"]
+				col = np.where(snv_sampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0] + l
+				c[row][col] = cp
+			else:
+				cp = temp_snv_dict[(chrm, pos)]["copy_num"]
+				col = np.where(snv_unsampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0]
+				c_unsampled_snv[row][col] = cp
 
 		# add copy number for segments
 		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
@@ -482,9 +499,8 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample=0.001):
 					else:
 						c[row][col] = cp2
 						c[row][col + r] = cp1
-
 	result = np.array(c)
-	return result
+	return result, np.array(c_unsampled_snv), snv_sampled_idx, snv_unsampled_idx
 
 # loop through each node in tree(Tree), 
 # for each treeNode: use self.get_copy_nums_dict() to get bgns, ends, cps list for each chromosomes
@@ -682,7 +698,8 @@ def get_snv_rec_id(snv_idx, g):
 
 # a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 # generate a vcf file for each sample
-def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C, c_p, c_m, a, h, mate_dict, outputFolder):
+def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx, snv_unsampled_idx,
+			   seg_bgn_idx_dict, seg_end_idx_dict, F, F_unsampled_snv, U, C, c_p, c_m, a, h, mate_dict, outputFolder):
 	vcf_reader = vcf.Reader(open(metaFile, 'r'))
 	vcf_reader.metadata['filedate'][0] = datetime.datetime.now().date().strftime('%Y%m%d') # set date to current date
 	f_p = np.dot(U, c_p)
@@ -693,6 +710,8 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_id
 		sample_idx = i + 1
 		temp_file = outputFolder + '/sample' + str(sample_idx) + '.vcf'
 		temp_writer = vcf.Writer(open(temp_file, 'w'), vcf_reader)
+		temp_file_unsampled_snv = outputFolder + '/sample' + str(sample_idx) + '_unsampled_snv.vcf'
+		temp_writer_unsampled_snv = vcf.Writer(open(temp_file_unsampled_snv, 'w'), vcf_reader)
 		alt_type, gt_cnv = 'CNV', '1|1' # constants for all cnv records
 		for chrom in sorted(seg_cn_idx_dict.keys()):
 			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key = lambda x: x[1]):
@@ -716,6 +735,58 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_id
 				info_mateid = get_sv_rec_id(mate_id, l)
 				alt_rO = False if mate_isLeft == True else True
 				temp_writer.write_record(generate_sv(chrom, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, alt_wMA, info_mateid, gt_sv, cnadj, bdp, dp))
+		###xf: add snvs
+		for (key, val) in sorted(snv_cn_idx_dict.items(), key= lambda x: x[1]):
+			chrm, pos = key
+			rec_id = get_snv_rec_id(val, g)
+			gt_snv = '0|1'
+			if val in snv_sampled_idx:
+				cnadj_snv = F[i][np.where(snv_sampled_idx == val)[0][0]+l]
+				temp_writer.write_record(generate_snv(chrm, pos, rec_id, gt_snv, cnadj_snv))
+			else:
+				cnadj_snv = F_unsampled_snv[i][np.where(snv_unsampled_idx == val)[0][0]]
+				temp_writer_unsampled_snv.write_record(generate_snv(chrm, pos, rec_id, gt_snv, cnadj_snv))
+
+
+def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict,
+			   seg_bgn_idx_dict, seg_end_idx_dict, F, U, C, c_p, c_m, a, h, mate_dict, outputFolder):
+	vcf_reader = vcf.Reader(open(metaFile, 'r'))
+	vcf_reader.metadata['filedate'][0] = datetime.datetime.now().date().strftime('%Y%m%d')  # set date to current date
+	f_p = np.dot(U, c_p)
+	f_m = np.dot(U, c_m)
+	mixed_a = np.dot(U, a)  # m * l
+	mixed_h = np.dot(U, h)  # m * l
+	for i in range(len(U)):
+		sample_idx = i + 1
+		temp_file = outputFolder + '/sample' + str(sample_idx) + '.vcf'
+		temp_writer = vcf.Writer(open(temp_file, 'w'), vcf_reader)
+
+		alt_type, gt_cnv = 'CNV', '1|1'  # constants for all cnv records
+		for chrom in sorted(seg_cn_idx_dict.keys()):
+			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key=lambda x: x[1]):
+				pos = key[0]
+				rec_id = get_cnv_rec_id(val, r)
+				info_end = key[1]
+				cn = [f_p[i][val], f_m[i][val]]
+				temp_writer.write_record(generate_cnv(chrom, pos, rec_id, alt_type, info_end, gt_cnv, cn))
+
+		alt_ori, alt_cS, alt_wMA, gt_sv = True, str(), True, '1|0'  # constants for all sv records
+		for chrom in sorted(sv_cn_idx_dict.keys()):
+			for (key, val) in sorted(sv_cn_idx_dict[chrom].items(), key=lambda x: x[1]):
+				pos, isLeft = key[0], key[1]
+				rec_id = get_sv_rec_id(val, l)
+				(mate_chrom, mate_pos, mate_isLeft) = mate_dict[(chrom, pos, isLeft)]
+				# print(sv_cn_idx_dict[mate_chrom])
+				mate_id = sv_cn_idx_dict[mate_chrom][(mate_pos, mate_isLeft, mate_chrom)]
+				alt_chr, alt_pos = mate_chrom, mate_pos
+				cnadj = F[i][val]
+				bdp, dp = int(round(mixed_a[i][val])), int(round(mixed_h[i][val]))
+				info_mateid = get_sv_rec_id(mate_id, l)
+				alt_rO = False if mate_isLeft == True else True
+				temp_writer.write_record(
+					generate_sv(chrom, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, alt_wMA, info_mateid,
+								gt_sv, cnadj, bdp, dp))
+
 
 
 # chrom(str), pos(int), rec_id(str), ref(str), qual = None, filter(list), fmt = 'GT:CNADJ', sample = ['TUMOR', 'NORMAL']
@@ -741,6 +812,17 @@ def generate_sv(chrm, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, al
 	newRec = vcf.model._Record(chrm, pos, rec_id, ref, alts, qual, filt, info, fmt, samples, calls)
 	return newRec
 
+def generate_snv(chrm, pos, rec_id, gt, cnadj):
+	ref = '.'
+	alt = '.'
+	qual = None
+	filt = list()
+	info = dict()
+	fmt = 'GT:CNADJ'
+	samples = ['TUMOR', 'NORMAL']
+	calls = [vcf.model._Call(0, 'TUMOR', svCallData(gt,cnadj)), vcf.model._Call(1, 'NORMAL', svCallData('0|0', 0))]
+	newRec = vcf.model._Record(chrm, pos, rec_id, ref, alt, qual, filt, info, fmt, samples, calls)
+	return newRec
 
 def generate_cnv(chrm, pos, rec_id, alt_type, info_end, gt, cn):
 	ref = '.'
@@ -758,10 +840,7 @@ def generate_cnv(chrm, pos, rec_id, alt_type, info_end, gt, cn):
 	return newRec
 
 
-def generate_snv(chrm, pos, rec_id):
-	ref = '.'
 
-	return
 
 
 def is_cnv_record(rec):
