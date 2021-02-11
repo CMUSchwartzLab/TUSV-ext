@@ -100,8 +100,13 @@ class GeneProf:
 
 	def random_mutation_snv(self):
 		mut_num = np.random.poisson(self.constants_dict["snv_mut_lambda"])
-		mut_chr = random.choice(list(self.chrom_dict.keys()), size=mut_num)
-		mut_pos = np.random.randint(0, self.chrom_dict[mut_chr].n, size=mut_num)
+		mut_chr_idx = np.random.choice(len(self.chrom_dict.keys()), size=mut_num)
+		mut_chr = []
+		mut_pos = []
+		for i in range(mut_num):
+			mut_chr_current = self.chrom_dict.keys()[mut_chr_idx[i]]
+			mut_chr.append(mut_chr_current)
+			mut_pos.append(np.random.randint(0, self.chrom_dict[mut_chr_current].n))
 		return mut_num, mut_chr, mut_pos
 
 	def is_legal_trans(self, chr1, ins_Pos, chr2, bgn, end):

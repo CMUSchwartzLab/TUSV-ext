@@ -200,8 +200,8 @@ def main(argv):
 			output_tsv(U, '/U.tsv', outputFolder)
 			output_tsv(C, '/C.tsv', outputFolder)
 			output_tsv(F, '/F.tsv', outputFolder)
-			output_tsv(F_unsampled_snv, 'F_unsampled_snv.tsv', outputFolder)
-			output_tsv(C_unsampled_snv, 'C_unsampled_snv.tsv', outputFolder)
+			output_tsv(F_unsampled_snv, '/F_unsampled_snv.tsv', outputFolder)
+			output_tsv(C_unsampled_snv, '/C_unsampled_snv.tsv', outputFolder)
 
 		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
 		pickle.dump(edge_list, edge_list_pickle)
@@ -814,7 +814,7 @@ def generate_sv(chrm, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, al
 
 def generate_snv(chrm, pos, rec_id, gt, cnadj):
 	ref = '.'
-	alt = '.'
+	alt = list()
 	qual = None
 	filt = list()
 	info = dict()
