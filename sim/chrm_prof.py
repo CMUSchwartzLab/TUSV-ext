@@ -332,7 +332,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		# split orgNode1 and all its children
 		### xf: split the orgNode with different position according to whether this mutNode is inv or not
 		if splitMut.is_inv:
-			orgNode2 = orgNode1.split(splitMut.end - k - splitMut.bgn + 1)
+			orgNode2 = orgNode1.split(splitMut.end - k - splitMut.bgn + 1)  ### node split k is the pure length instead of absolute pos
 			### xf: relink the parent-children relationship for SVs and SNVs
 			temp_children_list = list(orgNode1.SNV_Org_children)  ###xf: list.copy() only works for python3
 			for child in temp_children_list:
