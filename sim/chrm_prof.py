@@ -111,6 +111,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 		SNV_OrgNode.SNV_Mut_children.append(SNV_MutNode)
 		SNV_MutNode.SNV_Org_parent = SNV_OrgNode
+		print(orgNode.chrm, orgNode.pm, org_pos)
 		return True
 
 	def deepcopy_(self, other_muts):
