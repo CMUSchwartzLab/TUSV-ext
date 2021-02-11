@@ -84,15 +84,15 @@ def main(argv):
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	# chrom_dict[('1', 0)] = chpr.ChrmProf(248956422, '1', 0)
-	# chrom_dict[('1', 1)] = chpr.ChrmProf(248956422, '1', 1)
-	# chrom_dict[('2', 0)] = chpr.ChrmProf(242193529, '2', 0)
-	# chrom_dict[('2', 1)] = chpr.ChrmProf(242193529, '2', 1)
+	chrom_dict[('1', 0)] = chpr.ChrmProf(1000, '1', 0)
+	chrom_dict[('1', 1)] = chpr.ChrmProf(1000, '1', 1)
+	# chrom_dict[('2', 0)] = chpr.ChrmProf(1000, '2', 0)
+	# chrom_dict[('2', 1)] = chpr.ChrmProf(1000, '2', 1)
 	# chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
 	# chrom_dict[('3', 1)] = chpr.ChrmProf(198295559, '3', 1)
 
-	chrom_dict[('1', 0)] = chpr.ChrmProf(249198692, '1', 0) #from ICGC CNV data
-	chrom_dict[('1', 1)] = chpr.ChrmProf(249198692, '1', 1)
+	# chrom_dict[('1', 0)] = chpr.ChrmProf(249198692, '1', 0) #from ICGC CNV data
+	# chrom_dict[('1', 1)] = chpr.ChrmProf(249198692, '1', 1)
 	# chrom_dict[('2', 0)] = chpr.ChrmProf(243048760, '2', 0)
 	# chrom_dict[('2', 1)] = chpr.ChrmProf(243048760, '2', 1)
 	# chrom_dict[('3', 0)] = chpr.ChrmProf(197856433, '3', 0)
@@ -788,7 +788,7 @@ def generate_snv(chrm, pos, rec_id, gt, cnadj):
 	info = dict()
 	fmt = 'GT:CNADJ'
 	samples = ['TUMOR', 'NORMAL']
-	calls = [vcf.model._Call(0, 'TUMOR', svCallData(gt,cnadj)), vcf.model._Call(1, 'NORMAL', svCallData('0|0', 0))]
+	calls = [vcf.model._Call(0, 'TUMOR', snvCallData(gt,cnadj)), vcf.model._Call(1, 'NORMAL', snvCallData('0|0', 0))]
 	newRec = vcf.model._Record(chrm, pos, rec_id, ref, alt, qual, filt, info, fmt, samples, calls)
 	return newRec
 
@@ -972,6 +972,15 @@ class svCallData:
 
 	def __call__(self, var):
 		return [self.CNADJ, self.BDP, self.DP]
+
+class snvCallData:
+	def __init__(self, gt = '0|0', cnadj = '0'):
+		self.GT = gt
+		self.CNADJ = str(cnadj)
+		self.__getitem__ = self
+
+	def __call__(self, var):
+		return [self.CNADJ]
 
 
 class cnvCallData:

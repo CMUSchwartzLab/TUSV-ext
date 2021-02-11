@@ -98,12 +98,12 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 		SNV_MutNode.Mut_parent = splitMut
 		splitMut.SNV_Mut_children.append(SNV_MutNode)
-
+		k = pos - splitMut.bgn
 		orgNode = splitMut.parent
 		if splitMut.is_inv:
-			org_pos = orgNode.end - (pos - splitMut.bgn)
+			org_pos = orgNode.end - k
 		else:
-			org_pos = pos
+			org_pos = orgNode.bgn + k
 		SNV_OrgNode = _SNV_OrgNode(org_pos, orgNode.chrm, orgNode.pm)
 
 		SNV_OrgNode.Org_parent = orgNode
