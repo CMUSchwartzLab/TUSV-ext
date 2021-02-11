@@ -332,17 +332,17 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		# split orgNode1 and all its children
 		### xf: split the orgNode with different position according to whether this mutNode is inv or not
 		if splitMut.is_inv:
-			orgNode2 = orgNode1.split(splitMut.end - k - splitMut.bgn + 1)
+			orgNode2 = orgNode1.split(splitMut.end - k + 1)
 			### xf: relink the parent-children relationship for SVs and SNVs
-			temp_children_list = orgNode1.SNV_Org_children.copy()
+			temp_children_list = list(orgNode1.SNV_Org_children)  ###xf: list.copy() only works for python3
 			for child in temp_children_list:
-				if child.pos >= splitMut.end - k - splitMut.bgn + 1:
+				if child.pos >= splitMut.end - k + 1:
 					child.Org_parent = orgNode2
 					orgNode2.SNV_Org_children.append(child)
 					orgNode1.SNV_Org_children.remove(child)
 		else:
 			orgNode2 = orgNode1.split(k)
-			temp_children_list = orgNode1.SNV_Org_children.copy()
+			temp_children_list = list(orgNode1.SNV_Org_children)
 			for child in temp_children_list:
 				if child.pos >= k:
 					child.Org_parent = orgNode2
@@ -352,8 +352,8 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			mutNode2 = mutNode1.split(k)
 			mutNode2.parent = orgNode2
 			orgNode2.children.append(mutNode2)
-			temp_children_list = mutNode1.SNV_Mut_children
-			if splitMut.is_inv:
+			temp_children_list = list(mutNode1.SNV_Mut_children)
+			if mutNode1.is_inv:
 				for mutchild in temp_children_list:
 					if mutchild.pos <= splitMut.bgn + k - 1:
 						mutchild.Mut_parent = mutNode2

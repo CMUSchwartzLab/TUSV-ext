@@ -84,9 +84,9 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
     if should_overide_lambdas:
         m = len(F)
-        l, r = Q.shape
-        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )/2
-        lamb2 = float(l + 2*r) / float(l)/2
+        l_g, r = Q.shape
+        lamb1 = float(l_g + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )/2
+        lamb2 = float(l_g + 2*r) / float(l_g)/2
 
     Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
     num_complete = 0
@@ -121,16 +121,16 @@ def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should
     F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)  # for simulation, it will not change
     assert np.array_equal(F_phasing,F_true)
     m = F.shape[0]
-    l, r = Q.shape
+    l_g, r = Q.shape
     print(F_phasing.shape)
     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
     if should_overide_lambdas:
 
-        lamb1 = float(l + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))/2
-        lamb2 = float(l + 2*r) / float(l)/2
+        lamb1 = float(l_g + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))/2
+        lamb2 = float(l_g + 2*r) / float(l_g)/2
 
-    F_seg = F[:, l:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
-    Pi = np_divide_0(F[:, :l], F_seg)
+    F_seg = F[:, l_g:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
+    Pi = np_divide_0(F[:, :l_g], F_seg)
     Gamma = _calculate_Gamma(Q, C_true, n)
     S = _calculate_S(Pi, U_true, C_true, Gamma, m, l)
     in_dir_split = in_dir.rsplit('/', 1)
