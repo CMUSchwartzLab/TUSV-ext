@@ -64,7 +64,7 @@ def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_li
         else:
             U = get_U(F, F_phasing, C, n, R, W, l)
 
-        obj_val, C, E, R, W_sv, W_snv, err_msg = get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
+        obj_val, C, E, R, W, W_sv, W_snv, err_msg = get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
 
         # handle errors
         if err_msg != None:
@@ -76,7 +76,7 @@ def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_li
 
         prevC = C
 
-    return U, C, E, R, W_sv, W_snv, obj_val, None
+    return U, C, E, R, W, W_sv, W_snv, obj_val, None
 
 
 #  input: F (np.array of float) [m, l+g+2r] mixed copy number f_p,s of mutation s in sample p
@@ -176,13 +176,15 @@ def get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     A = _as_solved(A)
     W_node_sv = np.zeros((N, l), dtype=int)
     W_node_snv = np.zeros((N, g), dtype=int)
+    W_node = np.zeros((N, l+g), dtype=int)
     for j in xrange(0, N):
         for b in xrange(0, l):
             W_node_sv[j, b] = sum([int(W[i, j, b].X) for i in xrange(0, N)])
         for b in xrange(0, g):
             W_node_snv[j, b] = sum([int(W[i, j, b].X) for i in xrange(0, N)])
-
-    return mod.objVal, C, E, R, W_node_sv, W_node_snv, None
+        for b in xrange(0, l+g):
+            W_node[j, b] = sum([int(W[i, j, b].X) for i in xrange(0, N)])
+    return mod.objVal, C, E, R, W_node, W_node_sv, W_node_snv, None
 
 
 # # # # # # # # # # # # # # # # # # # # # #
@@ -285,21 +287,22 @@ def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, g, Gam, c_ma
         mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
     for i in xrange(0, N):
         for j in xrange(0, N):
-            for b in xrange(0, l+g): ### xf: only set constraints to the breakpoints that are not appeared in this branch
-                # con_sgn0 = mod.addVar(vtype=gp.GRB.BINARY)
-                # mod.addConstr(con_sgn0 == _get_consensus_sgn(mod, Gam[j, b, 0] - Gam[i, b, 0], C[j, b] - C[i, b], -c_max, c_max)) # 2 if both are positive
-                # con_sgn1 = mod.addVar(vtype=gp.GRB.BINARY)
-                # mod.addConstr(con_sgn1 == _get_consensus_sgn(mod, Gam[j, b, 1] - Gam[i, b, 1], C[j, b] - C[i, b], -c_max, c_max)) # 0 if both are negative
+            for b in xrange(0, l): ### xf: only set constraints to the breakpoints that are not appeared in this branch
 
                 mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - (2 - E[i, j] - D[b] + W[i, j, b]) * (2 * c_max + 1))
                 mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] + (2 - E[i, j] - D[b] + W[i, j, b]) * (2 * c_max + 2))
                 mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - (1 - E[i, j] + D[b] + W[i, j, b]) * (2 * c_max + 1))
                 mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] + (1 - E[i, j] + D[b] + W[i, j, b]) * (2 * c_max + 2))
+            for b in xrange(l, l + g):
+                con_sgn0 = mod.addVar(vtype=gp.GRB.BINARY)
+                mod.addConstr(con_sgn0 == _get_consensus_sgn(mod, Gam[j, b, 0] - Gam[i, b, 0], C[j, b] - C[i, b], -c_max, c_max)) # 2 if both are positive
+                con_sgn1 = mod.addVar(vtype=gp.GRB.BINARY)
+                mod.addConstr(con_sgn1 == _get_consensus_sgn(mod, Gam[j, b, 1] - Gam[i, b, 1], C[j, b] - C[i, b], -c_max, c_max)) # 0 if both are negative
 
-                # mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - (4 - E[i, j] - D[b] + W[i, j, b] - con_sgn0) * (2 * c_max + 1))
-                # mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] + (2 - E[i, j] - D[b] + W[i, j, b] + con_sgn0) * (2 * c_max + 1))
-                # mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - (3 - E[i, j] + D[b] + W[i, j, b] - con_sgn1) * (2 * c_max + 1))
-                # mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] + (1 - E[i, j] + D[b] + W[i, j, b] + con_sgn1) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - (4 - E[i, j] - D[b] + W[i, j, b] - con_sgn0) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] + (2 - E[i, j] - D[b] + W[i, j, b] + con_sgn0) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - (3 - E[i, j] + D[b] + W[i, j, b] - con_sgn1) * (2 * c_max + 1))
+                mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] + (1 - E[i, j] + D[b] + W[i, j, b] + con_sgn1) * (2 * c_max + 1))
 
 
 ### xf: removed this section

@@ -65,6 +65,10 @@ def main2(argv):
     U = np.loadtxt(upper_directory_split[0] + '/U.tsv', delimiter='\t')
     C = np.loadtxt(upper_directory_split[0] + '/C.tsv', delimiter='\t')
     F = np.loadtxt(upper_directory_split[0] + '/F.tsv', delimiter='\t')
+    if len(F.shape) == 1:
+        F = F[np.newaxis,:]
+    if len(U.shape) == 1:
+        U = U[np.newaxis, :]
     record_true_obj(args['input_directory'], args['output_directory'], args['num_leaves'], args['lambda1'], args['lambda2'],  args['num_subsamples'], args['overide_lambdas'], U, C, F)
     unmix(args['input_directory'], args['output_directory'], args['num_leaves'], args['c_max'], args['lambda1'],
       args['lambda2'], args['restart_iters'], args['cord_desc_iters'], args['processors'], args['time_limit'],
@@ -75,12 +79,13 @@ def main2(argv):
 #           in addition to any segments contining an SV as thos are manditory for the SV. None is all segments
 def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, num_processors, time_limit, metadata_fname, num_seg_subsamples, should_overide_lambdas):
     print("unmix")
-    F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
-    print(F_full,Q,G)
+    F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr, F_info_phasing = gm.get_mats(in_dir)
     Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)
+    #print(F_info_phasing)
+
+    np.savetxt(out_dir + "/F_info_phasing.csv", F_info_phasing, delimiter='\t', fmt='%s')
 
     F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)
-    print(F_phasing.shape)
     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
     if should_overide_lambdas:
         m = len(F)
@@ -88,16 +93,18 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
         lamb1 = float(l_g + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )/2
         lamb2 = float(l_g + 2*r) / float(l_g)/2
 
-    Us, Cs, Es, obj_vals, Rs, Ws = [], [], [], [], [], []
+    Us, Cs, Es, obj_vals, Rs, Ws, W_SVs, W_SNVs = [], [], [], [], [], [], [], []
     num_complete = 0
     for i in xrange(0, num_restarts):
-        U, C, E, R, W, obj_val, err_msg = sv.get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, num_cd_iters, time_limit)
+        U, C, E, R, W, W_SV, W_SNV, obj_val, err_msg = sv.get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, num_cd_iters, time_limit)
         printnow(str(i + 1) + ' of ' + str(num_restarts) + ' random restarts complete\n')
         Us.append(U)
         Cs.append(C)
         Es.append(E)
         Rs.append(R)
         Ws.append(W)
+        W_SVs.append(W_SV)
+        W_SNVs.append(W_SNV)
         obj_vals.append(obj_val)
 
     best_i = 0
@@ -110,15 +117,16 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
     with open(out_dir + "/training_objective", 'w') as f:
         f.write(str(best_obj_val))
 
-    writer = build_vcf_writer(F_full, Cs[best_i], org_indxs, G, bp_attr, cv_attr, metadata_fname)
+    writer = build_vcf_writer(F_full, Cs[best_i], org_indxs, G, Q, bp_attr, cv_attr, metadata_fname)
 
-    write_to_files(out_dir, Us[best_i], Cs[best_i], Es[best_i], Rs[best_i], Ws[best_i], F, obj_vals[best_i], F_full, F_phasing_full, org_indxs, writer)
+    write_to_files(out_dir, l_g, Us[best_i], Cs[best_i], Es[best_i], Rs[best_i], Ws[best_i], W_SVs[best_i], W_SNVs[best_i], F, obj_vals[best_i], F_full, F_phasing_full, org_indxs, writer)
 
 def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should_overide_lambdas, U_true, C_true, F_true):
-    F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr = gm.get_mats(in_dir)
+    F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr, F_info_phasing = gm.get_mats(in_dir)
     Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)
 
     F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)  # for simulation, it will not change
+    print(F_phasing, F_true)
     assert np.array_equal(F_phasing,F_true)
     m = F.shape[0]
     l_g, r = Q.shape
@@ -132,13 +140,13 @@ def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should
     F_seg = F[:, l_g:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
     Pi = np_divide_0(F[:, :l_g], F_seg)
     Gamma = _calculate_Gamma(Q, C_true, n)
-    S = _calculate_S(Pi, U_true, C_true, Gamma, m, l)
+    S = _calculate_S(Pi, U_true, C_true, Gamma, m, l_g)
     in_dir_split = in_dir.rsplit('/', 1)
     if in_dir_split[1] == '':
         in_dir_split = in_dir_split[0].rsplit('/', 1)
     with open(in_dir_split[0] + "/edge_list.pickle", 'rb') as f:
         edge_list = pickle.load(f)
-    R = _calculate_R(C_true, edge_list, l)
+    R = _calculate_R(C_true, edge_list, l_g)
     obj_val = _calculate_obj_val(F_phasing, C_true, U_true, R, S, lamb1, lamb2)
     with open(out_dir + "/true_objective", 'w') as g:
         g.write(str(obj_val))
@@ -173,8 +181,8 @@ def randomly_remove_segments(F, F_phasing, Q, num_seg_subsamples):
     print(Q)
     if num_seg_subsamples is None:
         return F, F_phasing, Q, None
-    l, r = Q.shape
-    l, r = int(l), int(r)
+    l_g, r = Q.shape
+    l_g, r = int(l_g), int(r)
 
     bp_segs = []
     for s in xrange(0, r):
@@ -190,10 +198,13 @@ def randomly_remove_segments(F, F_phasing, Q, num_seg_subsamples):
     drops = [ s for s in xrange(0, r) if s not in keeps ]
 
     Q = np.delete(Q, drops, axis = 1) # remove columns for segments we do not keep
-    F = np.delete(F, [ s + l for s in drops ], axis = 1)
-    F_phasing = np.delete(F_phasing, [ s + l + r for s in drops ], axis=1)
-    F_phasing = np.delete(F_phasing, [s + l for s in drops], axis=1)
-    return F, F_phasing, Q, [ s + l for s in keeps ]
+    F = np.delete(F, [ s + l_g for s in drops ], axis = 1)
+    F_phasing = np.delete(F_phasing, [ s + l_g + r for s in drops ], axis=1)
+    F_phasing = np.delete(F_phasing, [s + l_g for s in drops], axis=1)
+    # F_info_phasing = np.delete(F_info_phasing, [ s + l_g + r for s in drops ], axis=1)
+    # F_info_phasing = np.delete(F_info_phasing, [s + l_g for s in drops], axis=1)
+
+    return F, F_phasing, Q, [ s + l_g for s in keeps ]
 
 # returns a subset of lst containing k random elements
 def random_subset(lst, k):
@@ -228,19 +239,21 @@ def printnow(s):
 #         bp_attr (dict) key is breakpoint index. val is tuple (chrm (str), pos (int), extends_left (bool))
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
 # output: w (vcf_help.Writer) writer to be used to write entire .vcf file
-def build_vcf_writer(F, C, org_indices, G, bp_attr, cv_attr, metadata_fname):
+def build_vcf_writer(F, C, org_indices, G, Q, bp_attr, cv_attr, metadata_fname):
     print(org_indices)
-    m, _ = F.shape
-    n, _ = C.shape
+    m, l_g_2r = F.shape
+    n, l_g_2rp = C.shape
     l, _ = G.shape
-    r = F.shape[1] - l
-    print(C[:,:].shape, r)
+    g_2r = l_g_2r - l
+    l_g = Q.shape[0]
+    r = (l_g_2r - l_g)/2
+    print(C[:,:].shape, g_2r)
 
     if org_indices is not None: # only fill in values for segments not used if did not use some segments
         org_indices_minor = [org_indices[i] + r for i in range(len(org_indices))]
-        c_org_indices = [ i for i in xrange(0, l) ] + org_indices + org_indices_minor
+        c_org_indices = [ i for i in xrange(0, l_g) ] + org_indices + org_indices_minor
         print(c_org_indices,len(c_org_indices))
-        C_out = -1*np.ones((n, l+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
+        C_out = -1*np.ones((n, l_g+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
         print(C_out.shape,C_out[:, c_org_indices].shape)
         C_out[:, c_org_indices] = C[:, :]           #   -1 is an indicator that this column should be omitted in validation
         C = C_out
@@ -275,28 +288,28 @@ def build_vcf_writer(F, C, org_indices, G, bp_attr, cv_attr, metadata_fname):
 #        F_full (np.array) [m, l+r] mixed copy number for all l bps and r segments for each sample
 #        org_indices (list of int) for each segment in F, the index of where it is found in input F_all
 #        writer (vcf_help.Writer) writer to be used to write entire .vcf file
-def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, F_phasing_full, org_indices, writer):
-    l = F.shape[1]
-    if org_indices is not None:
-        l = F.shape[1] - len(org_indices)
-    r = F_full.shape[1] - l
+def write_to_files(d, l_g, U, C, E, R, W, W_SV, W_SNV, F, obj_val, F_full, F_phasing_full, org_indices, writer):
+    l_g_2r = F_full.shape[1]
+    r = (l_g_2r - l_g)/2
     n, _ = C.shape
 
     if org_indices is not None:
         org_indices_minor = [org_indices[i] + r for i in range(len(org_indices))]
-        c_org_indices = [ i for i in xrange(0, l) ] + org_indices + org_indices_minor
-        C_out = -1*np.ones((n, l+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
+        c_org_indices = [ i for i in xrange(0, l_g) ] + org_indices + org_indices_minor
+        C_out = -1*np.ones((n, l_g+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
         C_out[:, c_org_indices] = C[:, :]           #   -1 is an indicator that this column should be omitted in validation
     else:
         C_out = C
 
-    fnames = [ d + fname for fname in ['U.tsv', 'C.tsv', 'T.dot', 'F.tsv',  'W.tsv', 'obj_val.txt', 'unmixed.vcf', 'unmixed.xml','F_phasing.tsv'] ]
+    fnames = [ d + fname for fname in ['U.tsv', 'C.tsv', 'T.dot', 'F.tsv',  'W.tsv', 'obj_val.txt', 'unmixed.vcf', 'unmixed.xml','F_phasing.tsv', 'W_SV.tsv', 'W_SNV.tsv'] ]
     for fname in fnames:
         fm.touch(fname)
     np.savetxt(fnames[0], U, delimiter = '\t', fmt = '%.8f')
     np.savetxt(fnames[1], C_out, delimiter = '\t', fmt = '%.8f')
     np.savetxt(fnames[3], F_full, delimiter = '\t', fmt = '%.8f')
     np.savetxt(fnames[4], W, delimiter = '\t', fmt = '%.8f')
+    np.savetxt(fnames[9], W_SV, delimiter='\t', fmt='%.8f')
+    np.savetxt(fnames[10], W_SNV, delimiter='\t', fmt='%.8f')
     np.savetxt(fnames[5], np.array([obj_val]), delimiter = '\t', fmt = '%.8f')
     np.savetxt(fnames[8], F_phasing_full, delimiter='\t', fmt='%.8f')
     writer.write(open(fnames[6], 'w'))
@@ -304,7 +317,7 @@ def write_to_files(d, U, C, E, R, W, F, obj_val, F_full, F_phasing_full, org_ind
     open(fnames[2], 'w').write(dot.source) # write tree T in dot format
     dot.format = 'svg'
     dot.render(d + 'T')                    # display tree T in .svg
-    write_xml(fnames[7], E, C, l)
+    write_xml(fnames[7], E, C, l_g)
 
 #  input: E (np.array of int) [2n-1, 2n-1] 0 if no edge, 1 if edge between nodes i and j
 #         R (np.array of int) [2n-1, 2n-1] cost of each edge in the tree
@@ -324,7 +337,7 @@ def to_dot(E, R, W):
     return dot
 
 #  input: E (np.array)
-def write_xml(fname, E, C, l):
+def write_xml(fname, E, C, l_g):
     n, _ = E.shape
 
     root = Tree()
@@ -336,7 +349,7 @@ def write_xml(fname, E, C, l):
         child_idxs = np.where(E[i, :] == 1)[0]
         for ci in child_idxs:
             child = cur.add_child(name = str(ci))
-            child.dist = np.linalg.norm( np.subtract( C[i, l:], C[ci, l:] ), ord = 1 )
+            child.dist = np.linalg.norm( np.subtract( C[i, l_g:], C[ci, l_g:] ), ord = 1 )
             stack.append(child)
 
     newick_str = root.write(features = ['name'], format = 1, format_root_node = True) # format_root_node=True puts root node name in str
@@ -361,8 +374,10 @@ def write_xml(fname, E, C, l):
 #  does: exits with error message if any of the input is not valid
 def check_valid_input(Q, G, A, H, F_full,F_phasing_full):  ### A and H are empty matrices
     print("check valid input")
-    l, r = np.shape(Q)
-    print(l,r)
+    l_g, r = np.shape(Q)
+    l, _ = np.shape(G)
+    g = l_g - l
+    print(l, g, r)
     m = np.shape(A)[0]
     Q_msg = 'There is an issue with input binary matrix Q (indicates which segment each breakpoint belongs to). Each breakpoint must belong to exactly one segment.'
     G_msg = 'There is an issue with input binary matrix G (indicates which breakpoints are mates). Each breakpoint must be mated into pairs.'
@@ -402,16 +417,16 @@ def check_valid_input(Q, G, A, H, F_full,F_phasing_full):  ### A and H are empty
         '''
     raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
 
-    abnormal_idx3 = np.where(np.sum(G, 0) != 2)[0]
-    print(abnormal_idx3)
-    Q = np.delete(Q, abnormal_idx3, axis=0)
-    G = np.delete(G, abnormal_idx3, axis=0)
-    G = np.delete(G, abnormal_idx3, axis=1)
-    F_full = np.delete(F_full, abnormal_idx3, axis=1)
-    F_phasing_full = np.delete(F_phasing_full, abnormal_idx3, axis=1)
-    l, r = np.shape(Q)
-    print(G)
-    print(l, r)
+    # abnormal_idx3 = np.where(np.sum(G, 0) != 2)[0]
+    # print(abnormal_idx3)
+    # Q = np.delete(Q, abnormal_idx3, axis=0)
+    # G = np.delete(G, abnormal_idx3, axis=0)
+    # G = np.delete(G, abnormal_idx3, axis=1)
+    # F_full = np.delete(F_full, abnormal_idx3, axis=1)
+    # F_phasing_full = np.delete(F_phasing_full, abnormal_idx3, axis=1)
+    # l, r = np.shape(Q)
+    # print(G)
+    # print(l, r)
 
     raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
     for i in xrange(0, l):
