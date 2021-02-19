@@ -84,59 +84,59 @@ def main(argv):
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	chrom_dict[('1', 0)] = chpr.ChrmProf(1000, '1', 0)
-	chrom_dict[('1', 1)] = chpr.ChrmProf(1000, '1', 1)
+	# chrom_dict[('1', 0)] = chpr.ChrmProf(1000, '1', 0)
+	# chrom_dict[('1', 1)] = chpr.ChrmProf(1000, '1', 1)
 	# chrom_dict[('2', 0)] = chpr.ChrmProf(1000, '2', 0)
 	# chrom_dict[('2', 1)] = chpr.ChrmProf(1000, '2', 1)
 	# chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
 	# chrom_dict[('3', 1)] = chpr.ChrmProf(198295559, '3', 1)
 
-	# chrom_dict[('1', 0)] = chpr.ChrmProf(249198692, '1', 0) #from ICGC CNV data
-	# chrom_dict[('1', 1)] = chpr.ChrmProf(249198692, '1', 1)
-	# chrom_dict[('2', 0)] = chpr.ChrmProf(243048760, '2', 0)
-	# chrom_dict[('2', 1)] = chpr.ChrmProf(243048760, '2', 1)
-	# chrom_dict[('3', 0)] = chpr.ChrmProf(197856433, '3', 0)
-	# chrom_dict[('3', 1)] = chpr.ChrmProf(197856433, '3', 1)
-	# chrom_dict[('4', 0)] = chpr.ChrmProf(190921709, '4', 0)
-	# chrom_dict[('4', 1)] = chpr.ChrmProf(190921709, '4', 1)
-	# chrom_dict[('5', 0)] = chpr.ChrmProf(186092833, '5', 0)
-	# chrom_dict[('5', 1)] = chpr.ChrmProf(186092833, '5', 1)
-	# chrom_dict[('6', 0)] = chpr.ChrmProf(170918031, '6', 0)
-	# chrom_dict[('6', 1)] = chpr.ChrmProf(170918031, '6', 1)
-	# chrom_dict[('7', 0)] = chpr.ChrmProf(159119220, '7', 0)
-	# chrom_dict[('7', 1)] = chpr.ChrmProf(159119220, '7', 1)
-	# chrom_dict[('8', 0)] = chpr.ChrmProf(146293414, '8', 0)
-	# chrom_dict[('8', 1)] = chpr.ChrmProf(146293414, '8', 1)
-	# chrom_dict[('9', 0)] = chpr.ChrmProf(141071475, '9', 0)
-	# chrom_dict[('9', 1)] = chpr.ChrmProf(141071475, '9', 1)
-	# chrom_dict[('10', 0)] = chpr.ChrmProf(135434551, '10', 0)
-	# chrom_dict[('10', 1)] = chpr.ChrmProf(135434551, '10', 1)
-	# chrom_dict[('11', 0)] = chpr.ChrmProf(134944770, '11', 0)
-	# chrom_dict[('11', 1)] = chpr.ChrmProf(134944770, '11', 1)
-	# chrom_dict[('12', 0)] = chpr.ChrmProf(133777645, '12', 0)
-	# chrom_dict[('12', 1)] = chpr.ChrmProf(133777645, '12', 1)
-	# chrom_dict[('13', 0)] = chpr.ChrmProf(115106996, '13', 0)
-	# chrom_dict[('13', 1)] = chpr.ChrmProf(115106996, '13', 1)
-	# chrom_dict[('14', 0)] = chpr.ChrmProf(107285437, '14', 0)
-	# chrom_dict[('14', 1)] = chpr.ChrmProf(107285437, '14', 1)
-	# chrom_dict[('15', 0)] = chpr.ChrmProf(102400037, '15', 0)
-	# chrom_dict[('15', 1)] = chpr.ChrmProf(102400037, '15', 1)
-	# chrom_dict[('16', 0)] = chpr.ChrmProf(90163275, '16', 0)
-	# chrom_dict[('16', 1)] = chpr.ChrmProf(90163275, '16', 1)
-	# chrom_dict[('17', 0)] = chpr.ChrmProf(81048659, '17', 0)
-	# chrom_dict[('17', 1)] = chpr.ChrmProf(81048659, '17', 1)
-	# chrom_dict[('18', 0)] = chpr.ChrmProf(78015057, '18', 0)
-	# chrom_dict[('18', 1)] = chpr.ChrmProf(78015057, '18', 1)
-	# chrom_dict[('19', 0)] = chpr.ChrmProf(59095126, '19', 0)
-	# chrom_dict[('19', 1)] = chpr.ChrmProf(59095126, '19', 1)
-	# chrom_dict[('20', 0)] = chpr.ChrmProf(62912463, '20', 0)
-	# chrom_dict[('20', 1)] = chpr.ChrmProf(62912463, '20', 1)
-	# chrom_dict[('21', 0)] = chpr.ChrmProf(48084820, '21', 0)
-	# chrom_dict[('21', 1)] = chpr.ChrmProf(48084820, '21', 1)
-	# chrom_dict[('22', 0)] = chpr.ChrmProf(51219006, '22', 0)
-	# chrom_dict[('22', 1)] = chpr.ChrmProf(51219006, '22', 1)
-	# chrom_dict[('23', 0)] = chpr.ChrmProf(155233846, '23', 0)
-	# chrom_dict[('23', 1)] = chpr.ChrmProf(155233846, '23', 1)
+	chrom_dict[('1', 0)] = chpr.ChrmProf(249198692, '1', 0) #from ICGC CNV data
+	chrom_dict[('1', 1)] = chpr.ChrmProf(249198692, '1', 1)
+	chrom_dict[('2', 0)] = chpr.ChrmProf(243048760, '2', 0)
+	chrom_dict[('2', 1)] = chpr.ChrmProf(243048760, '2', 1)
+	chrom_dict[('3', 0)] = chpr.ChrmProf(197856433, '3', 0)
+	chrom_dict[('3', 1)] = chpr.ChrmProf(197856433, '3', 1)
+	chrom_dict[('4', 0)] = chpr.ChrmProf(190921709, '4', 0)
+	chrom_dict[('4', 1)] = chpr.ChrmProf(190921709, '4', 1)
+	chrom_dict[('5', 0)] = chpr.ChrmProf(186092833, '5', 0)
+	chrom_dict[('5', 1)] = chpr.ChrmProf(186092833, '5', 1)
+	chrom_dict[('6', 0)] = chpr.ChrmProf(170918031, '6', 0)
+	chrom_dict[('6', 1)] = chpr.ChrmProf(170918031, '6', 1)
+	chrom_dict[('7', 0)] = chpr.ChrmProf(159119220, '7', 0)
+	chrom_dict[('7', 1)] = chpr.ChrmProf(159119220, '7', 1)
+	chrom_dict[('8', 0)] = chpr.ChrmProf(146293414, '8', 0)
+	chrom_dict[('8', 1)] = chpr.ChrmProf(146293414, '8', 1)
+	chrom_dict[('9', 0)] = chpr.ChrmProf(141071475, '9', 0)
+	chrom_dict[('9', 1)] = chpr.ChrmProf(141071475, '9', 1)
+	chrom_dict[('10', 0)] = chpr.ChrmProf(135434551, '10', 0)
+	chrom_dict[('10', 1)] = chpr.ChrmProf(135434551, '10', 1)
+	chrom_dict[('11', 0)] = chpr.ChrmProf(134944770, '11', 0)
+	chrom_dict[('11', 1)] = chpr.ChrmProf(134944770, '11', 1)
+	chrom_dict[('12', 0)] = chpr.ChrmProf(133777645, '12', 0)
+	chrom_dict[('12', 1)] = chpr.ChrmProf(133777645, '12', 1)
+	chrom_dict[('13', 0)] = chpr.ChrmProf(115106996, '13', 0)
+	chrom_dict[('13', 1)] = chpr.ChrmProf(115106996, '13', 1)
+	chrom_dict[('14', 0)] = chpr.ChrmProf(107285437, '14', 0)
+	chrom_dict[('14', 1)] = chpr.ChrmProf(107285437, '14', 1)
+	chrom_dict[('15', 0)] = chpr.ChrmProf(102400037, '15', 0)
+	chrom_dict[('15', 1)] = chpr.ChrmProf(102400037, '15', 1)
+	chrom_dict[('16', 0)] = chpr.ChrmProf(90163275, '16', 0)
+	chrom_dict[('16', 1)] = chpr.ChrmProf(90163275, '16', 1)
+	chrom_dict[('17', 0)] = chpr.ChrmProf(81048659, '17', 0)
+	chrom_dict[('17', 1)] = chpr.ChrmProf(81048659, '17', 1)
+	chrom_dict[('18', 0)] = chpr.ChrmProf(78015057, '18', 0)
+	chrom_dict[('18', 1)] = chpr.ChrmProf(78015057, '18', 1)
+	chrom_dict[('19', 0)] = chpr.ChrmProf(59095126, '19', 0)
+	chrom_dict[('19', 1)] = chpr.ChrmProf(59095126, '19', 1)
+	chrom_dict[('20', 0)] = chpr.ChrmProf(62912463, '20', 0)
+	chrom_dict[('20', 1)] = chpr.ChrmProf(62912463, '20', 1)
+	chrom_dict[('21', 0)] = chpr.ChrmProf(48084820, '21', 0)
+	chrom_dict[('21', 1)] = chpr.ChrmProf(48084820, '21', 1)
+	chrom_dict[('22', 0)] = chpr.ChrmProf(51219006, '22', 0)
+	chrom_dict[('22', 1)] = chpr.ChrmProf(51219006, '22', 1)
+	chrom_dict[('23', 0)] = chpr.ChrmProf(155233846, '23', 0)
+	chrom_dict[('23', 1)] = chpr.ChrmProf(155233846, '23', 1)
 
 	# sub_folder_name = 'n_' + str(n) + '_m_' + str(m) + '_l_' + str(num_mutes)
 	if not os.path.exists(output_folder):
@@ -353,7 +353,7 @@ def get_snv_copy_num_idx_dict(tree):
 		for tuple in temp_snv_dict.keys():
 				if tuple not in d:
 					d.add(tuple)
-	sorted_d = sorted(list(d),key=lambda x: (x[0], x[1]))
+	sorted_d = sorted(list(d),key=lambda x: (int(x[0]), x[1]))
 	for k in range(len(sorted_d)):
 		d2[sorted_d[k]] = k
 
@@ -385,7 +385,7 @@ def get_bp_copy_num_idx_dict(tree, n, constants_dict):
 
 	# sort vals in d1 based on pos and isLeft (isLeft == True comes first) and chrom
 	idx = 0
-	sorted_chrom = sorted(d1.keys())
+	sorted_chrom = sorted(d1.keys(), key=int)
 	d2 = dict()
 	for chrom in sorted_chrom:
 		#print(d1[chrom])
@@ -425,7 +425,7 @@ def get_seg_copy_num_idx_dict(tree, n):
 			d1[chrom].append([bgns, ends, cps1, cps2])
 
 	idx = 0
-	sorted_chrom = sorted(d1.keys())
+	sorted_chrom = sorted(d1.keys(), key=int)
 	d2 = dict()
 	bgn2idx = dict()
 	end2idx = dict()
@@ -460,6 +460,7 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample=0.001):
 	g_sample = int(g*subsample)
 	snv_sampled_idx = np.sort(np.random.choice(g, size=g_sample, replace=False))
 	snv_unsampled_idx = np.setdiff1d(np.arange(g), snv_sampled_idx)
+	print(snv_unsampled_idx)
 
 	c = make_2d_list(len(tree.node_list), (l + g_sample + 2*r))
 	c_unsampled_snv = make_2d_list(len(tree.node_list), (g-g_sample))
@@ -678,11 +679,11 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 		sample_idx = i + 1
 		temp_file = outputFolder + '/sample' + str(sample_idx) + '.vcf'
 		temp_writer = vcf.Writer(open(temp_file, 'w'), vcf_reader)
-		temp_file_unsampled_snv = outputFolder + '/sample' + str(sample_idx) + '_unsampled_snv.vcf'
+		temp_file_unsampled_snv = outputFolder + '/unsampled_snv_sample' + str(sample_idx) + '.vcf'
 		temp_writer_unsampled_snv = vcf.Writer(open(temp_file_unsampled_snv, 'w'), vcf_reader)
 		alt_type, gt_cnv = 'CNV', '1|1' # constants for all cnv records
-		for chrom in sorted(seg_cn_idx_dict.keys()):
-			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key = lambda x: x[1]):
+		for chrom in sorted(seg_cn_idx_dict.keys(),key=int):
+			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key = lambda x: int(x[1])):
 				pos = key[0]
 				rec_id = get_cnv_rec_id(val, r)
 				info_end = key[1]
@@ -690,7 +691,7 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 				temp_writer.write_record(generate_cnv(chrom, pos, rec_id, alt_type, info_end, gt_cnv, cn))
 
 		alt_ori, alt_cS, alt_wMA, gt_sv = True, str(), True, '1|0' # constants for all sv records
-		for chrom in sorted(sv_cn_idx_dict.keys()):
+		for chrom in sorted(sv_cn_idx_dict.keys(),key=int):
 			for (key, val) in sorted(sv_cn_idx_dict[chrom].items(), key = lambda x: x[1]):
 				pos, isLeft = key[0], key[1]
 				rec_id = get_sv_rec_id(val, l)
@@ -704,7 +705,7 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 				alt_rO = False if mate_isLeft == True else True
 				temp_writer.write_record(generate_sv(chrom, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, alt_wMA, info_mateid, gt_sv, cnadj, bdp, dp))
 		###xf: add snvs
-		for (key, val) in sorted(snv_cn_idx_dict.items(), key= lambda x: x[1]):
+		for (key, val) in sorted(snv_cn_idx_dict.items(), key= lambda x: int(x[1])):
 			chrm, pos = key
 			rec_id = get_snv_rec_id(val, g)
 			gt_snv = '0|1'
@@ -730,7 +731,7 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict,
 		temp_writer = vcf.Writer(open(temp_file, 'w'), vcf_reader)
 
 		alt_type, gt_cnv = 'CNV', '1|1'  # constants for all cnv records
-		for chrom in sorted(seg_cn_idx_dict.keys()):
+		for chrom in sorted(seg_cn_idx_dict.keys(),key=int):
 			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key=lambda x: x[1]):
 				pos = key[0]
 				rec_id = get_cnv_rec_id(val, r)
@@ -739,7 +740,7 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict,
 				temp_writer.write_record(generate_cnv(chrom, pos, rec_id, alt_type, info_end, gt_cnv, cn))
 
 		alt_ori, alt_cS, alt_wMA, gt_sv = True, str(), True, '1|0'  # constants for all sv records
-		for chrom in sorted(sv_cn_idx_dict.keys()):
+		for chrom in sorted(sv_cn_idx_dict.keys(),key=int):
 			for (key, val) in sorted(sv_cn_idx_dict[chrom].items(), key=lambda x: x[1]):
 				pos, isLeft = key[0], key[1]
 				rec_id = get_sv_rec_id(val, l)
@@ -783,6 +784,7 @@ def generate_sv(chrm, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, al
 def generate_snv(chrm, pos, rec_id, gt, cnadj):
 	ref = '.'
 	alt = list()
+	alt.append(vcf.model._Substitution("N"))
 	qual = None
 	filt = list()
 	info = dict()
