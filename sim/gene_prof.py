@@ -61,6 +61,7 @@ class GeneProf:
 		self.maxCount = self.get_mut_count()
 		self.copy_num_dict = self.get_copy_nums_dict()
 		self.sv_dict = self.get_sv_read_nums_dict(self.cov, self.read_len)
+		self.snv_dict = self.get_snv_dict()
 
 
 	def get_constants(self):
@@ -69,6 +70,7 @@ class GeneProf:
 		self.exp_mut_count = self.constants_dict['exp_mut_count']
 		self.cov = self.constants_dict['cov']
 		self.read_len = self.constants_dict['read_len']
+		self.exp_mut_count_snv = self.constants_dict['snv_mut_lambda']
 
 
 
@@ -152,7 +154,7 @@ class GeneProf:
 		# print 'mut_type:', mut_type, 'mut_chr:', mut_chr, 'mut_size:', mut_size, 'mut_bgnPos:', mut_bgnPos, 'mut_endPos:', mut_endPos
 
 		if mut_type == 'amp':
-			amp_num = np.random.randint(1, 8)
+			amp_num = np.random.randint(1, 6)
 			self.chrom_dict[mut_chr].amp(mut_bgnPos, mut_endPos, amp_num, snv)
 
 		elif mut_type == 'rem':
@@ -267,7 +269,7 @@ class GeneProf:
 								others[tup_chr][tup_pos]["mated_reads"] += others_p[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_p[tup_chr][tup_pos]["total_reads"]
 								others[tup_chr][tup_pos]["copy_num"] += others_p[tup_chr][tup_pos]["copy_num"]
-
+								others[tup_chr][tup_pos]["pm"] = others[tup_chr][tup_pos]["pm"].union(others_p[tup_chr][tup_pos]["pm"])
 
 				# maternal chrom
 				sv_dict_m, others_m = self.chrom_dict[(idx, 1)].get_sv_read_nums(cov, read_len, idx, 1)
@@ -285,6 +287,7 @@ class GeneProf:
 								others[tup_chr][tup_pos]["mated_reads"] += others_m[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_m[tup_chr][tup_pos]["total_reads"]
 								others[tup_chr][tup_pos]["copy_num"] += others_m[tup_chr][tup_pos]["copy_num"]
+								assert(others[tup_chr][tup_pos]["pm"] == others_m[tup_chr][tup_pos]["pm"])
 				# combine paternal and maternal chrom sv dict
 				repeated = set()
 				for (pos, isLeft, chr_, pm_) in sv_dict_p:
@@ -301,7 +304,10 @@ class GeneProf:
 							temp[(pos, isLeft, chr_)]["mated_reads"] = sv_dict_p[(pos, isLeft, chr_, 0)]["mated_reads"] + sv_dict_m[(pos, isLeft, chr_, 1)]["mated_reads"]
 							temp[(pos, isLeft, chr_)]["total_reads"] = sv_dict_p[(pos, isLeft, chr_, 0)]["total_reads"] + sv_dict_m[(pos, isLeft, chr_, 1)]["total_reads"]
 							temp[(pos, isLeft, chr_)]["copy_num"] = sv_dict_p[(pos, isLeft, chr_, 0)]["copy_num"] + sv_dict_m[(pos, isLeft, chr_, 1)]["copy_num"]
-							###xf: change the relative copy number (?) to total copy number
+							assert(sv_dict_p[(pos, isLeft, chr_, 0)]["pm"] == sv_dict_m[(pos, isLeft, chr_, 1)]["pm"])
+							temp[(pos, isLeft, chr_)]["pm"] = sv_dict_p[(pos, isLeft, chr_, 0)]["pm"]
+
+						###xf: change the relative copy number (?) to total copy number
 						else:
 							print "\n"
 							print 'Different mate bp in pair of chromosomes!!!'
@@ -323,6 +329,7 @@ class GeneProf:
 						result[chr][(pos, isLeft, chr)]["mated_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mated_reads"]
 						result[chr][(pos, isLeft, chr)]["total_reads"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["total_reads"]
 						result[chr][(pos, isLeft, chr)]["copy_num"] += others[(chr, pm)][(pos, isLeft, chr_, pm_)]["copy_num"]
+						assert(result[chr][(pos, isLeft, chr)]["pm"] == others[(chr, pm)][(pos, isLeft, chr_, pm_)]["pm"])
 					else:
 						print("not consist",result[chr][(pos, isLeft, chr)]["mate"], others[(chr, pm)][(pos, isLeft, chr_, pm_)]["mate"][0:3])
 				else:
@@ -372,6 +379,9 @@ class GeneProf:
 		# deep copy self.sv_dict
 		sv_dict_new = copy.deepcopy(self.sv_dict)
 		gp.sv_dict = sv_dict_new
+
+		snv_dict_new = copy.deepcopy(self.snv_dict)
+		gp.snv_dict = snv_dict_new
 
 		return gp
 
