@@ -35,6 +35,7 @@ class Writer:
 	def __init__(self, num_samples, num_clones, metadata_fname):
 		self.bps = {} # key is id. val is BP
 		self.cvs = {} # key is id. val is CV
+		self.snvs = {} ###xf: key is id. val is vaf
 		self.snames = [ BULK_TUMOR_PREFIX + str(i+1) for i in xrange(0, num_samples) ] # name of each bulk tumor sample column
 		self.cnames = [ str(i) for i in xrange(0, num_clones) ] # name of each cell type sample column
 		self.metadata_fname = metadata_fname

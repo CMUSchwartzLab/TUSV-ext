@@ -85,6 +85,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				if snv_tuple not in snvs.keys():
 					snvs[snv_tuple] = {'copy_num': 0}
 				snvs[snv_tuple]['copy_num'] += 1
+				snvs[snv_tuple]['pm'] = snv_org.pm
 			cur = cur.r
 		return snvs
 
@@ -157,9 +158,11 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		while head != None:
 			head.parent.children.remove(head) # remove curent MutNode from children list of OrgNode
 			if snv:
+				print('rem:snv_mut_children', [j.pos for j in head.SNV_Mut_children])
 				for snv_child in head.SNV_Mut_children:
-					snv_child.SNV_Org_parent.remove(snv_child)
-					snv_child.Mut_parent.remove(snv_child)
+					snv_child.SNV_Org_parent.SNV_Mut_children.remove(snv_child)
+					print(snv_child.Mut_parent.SNV_Mut_children)
+					snv_child.Mut_parent.SNV_Mut_children.remove(snv_child)
 					del snv_child
 			prev = head
 			head = head.r
@@ -279,6 +282,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 		for i_amp in range(amp_num):
+			print(i_amp)
 			insR, head, tail = _copy_from_to(self.mut, bgn, end, snv) # copy list from bgn to end
 			### xf: copy means copy the whole identity including the parent-children relationship
 			### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL for MutNode
@@ -291,6 +295,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 			# increment bgn and end values for inserted region and segments to right
 			seg_len = end - bgn + 1
+			head_arch = head.copy()
 			while head != None:
 				head.bgn += seg_len
 				head.end += seg_len
@@ -604,15 +609,20 @@ def _copy_from_to(head, fm, to, snv):
 	i = 0
 	prevB = None
 	while curA != None:
-		curB = copy.copy(curA)
+		curB = curA.copy()
+		curB.parent = curA.parent
 		curB.parent.children.append(curB) # update parent's children pointers
 		if snv:
+			print('copy_from_to:snv_mut_children',[j.pos for j in curA.SNV_Mut_children])
 			for snv_child in curA.SNV_Mut_children:
-				mutB = copy.copy(snv_child)
+				#print(snv_child.pos)
+				mutB = snv_child.copy()
 				mutB.SNV_Org_parent = snv_child.SNV_Org_parent
 				snv_child.SNV_Org_parent.SNV_Mut_children.append(mutB)
+				print([j.pos for j in snv_child.SNV_Org_parent.SNV_Mut_children])
 				curB.SNV_Mut_children.append(mutB)
 				mutB.Mut_parent = curB
+
 		if i == 0:
 			headB = curB
 			i += 1
@@ -758,7 +768,6 @@ def _add_sv_to_dict(svs, others, cur, isBgn, chrm, pm):
 	return svs, others
 
 
-
 def _append_bp_copy_num(svs, others, mut_head):
 	cur = mut_head
 	while cur != None:
@@ -771,12 +780,14 @@ def _append_bp_copy_num(svs, others, mut_head):
 				if 'copy_num' not in svs[curTup]:
 					svs[curTup]['copy_num'] = 0
 				svs[curTup]['copy_num'] += 1
+				svs[curTup]['pm'] = curPM
 			elif (curChrm, curPM) in others.keys():
 				if curTup in others[(curChrm, curPM)]:
 					if others[(curChrm, curPM)][curTup]['mate'] == matTup:
 						if 'copy_num' not in others[(curChrm, curPM)][curTup]:
 							others[(curChrm, curPM)][curTup]['copy_num'] = 0
 						others[(curChrm, curPM)][curTup]['copy_num'] += 1
+						others[(curChrm, curPM)][curTup]['pm'] = curPM
 		cur = cur.r
 
 	# add copy number of zeros for breakpoints that were deleted
@@ -802,6 +813,7 @@ def _deepcopy_org(headA, other_muts):
 	i = 0
 	prvB = None
 	muts = []
+	snv_org_copy_dict = {}
 	while curA != None:
 		curB = curA.copy()
 		if i == 0:
@@ -817,6 +829,20 @@ def _deepcopy_org(headA, other_muts):
 			cB = cA.copy()
 			cB.parent = curB
 			curB.children.append(cB)
+			for snv_cA_mut in cA.SNV_Mut_children:
+				snv_cB_mut = snv_cA_mut.copy()
+				snv_cB_mut.Mut_parent = cB
+				cB.SNV_Mut_children.append(snv_cB_mut)
+				snv_cA_org = snv_cA_mut.SNV_Org_parent
+				if snv_cA_org not in snv_org_copy_dict.keys():
+					snv_cB_org = snv_cA_org.copy()
+					snv_org_copy_dict[snv_cA_org] = snv_cB_org
+				else:
+					snv_cB_org = snv_org_copy_dict[snv_cA_org]
+				curB.SNV_Org_children.append(snv_cB_org)
+				snv_cB_org.Org_parent = curB
+				snv_cB_mut.SNV_Org_parent = snv_cB_org
+				snv_cB_org.SNV_Mut_children.append(snv_cB_mut)
 			if cA.chrm == chrm and cA.pm == pm:
 				muts.append(cB)
 			else:
@@ -826,7 +852,7 @@ def _deepcopy_org(headA, other_muts):
 		curA = curA.r
 	return headB, muts, other_muts
 
-###xf: deepcopy mutNode
+###xf: deepcopy mutNode, not used
 def _deepcopy_mut(headA):
 	curA = headA
 	i = 0
