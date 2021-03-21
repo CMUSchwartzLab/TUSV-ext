@@ -87,9 +87,10 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
 
     F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)
     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
+    m = len(F)
+    l_g, r = Q.shape
     if should_overide_lambdas:
-        m = len(F)
-        l_g, r = Q.shape
+
         lamb1 = float(l_g + 2*r) / float(2*r) * float(m) / float(2 * (n-1) )/2
         lamb2 = float(l_g + 2*r) / float(l_g)/2
 
@@ -475,4 +476,4 @@ def set_non_dir_args(parser):
 
 
 if __name__ == "__main__":
-    main2(sys.argv[1:])
+    main(sys.argv[1:])
