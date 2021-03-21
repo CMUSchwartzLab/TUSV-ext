@@ -69,7 +69,7 @@ def main(argv):
 	output_folder = args['output_folder']
 
 	constants_dict = dict()
-	constants_dict['mut_types'] = ['amp', 'inv', 'rem','trans']
+	constants_dict['mut_types'] = ['amp','rem','inv', 'trans']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
 	if num_mutes_snv is not None:
@@ -81,13 +81,15 @@ def main(argv):
 	constants_dict['num_patients'] = num_patients
 	constants_dict['num_leaves'] = n
 	constants_dict['num_samples'] = m
+	constants_dict['deterministic']=args["deterministic"]
+	constants_dict['read_depth'] = args["read_depth"]
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	# chrom_dict[('1', 0)] = chpr.ChrmProf(1000, '1', 0)
-	# chrom_dict[('1', 1)] = chpr.ChrmProf(1000, '1', 1)
-	# chrom_dict[('2', 0)] = chpr.ChrmProf(1000, '2', 0)
-	# chrom_dict[('2', 1)] = chpr.ChrmProf(1000, '2', 1)
+	# chrom_dict[('1', 0)] = chpr.ChrmProf(10000, '1', 0)
+	# chrom_dict[('1', 1)] = chpr.ChrmProf(10000, '1', 1)
+	# chrom_dict[('2', 0)] = chpr.ChrmProf(10000, '2', 0)
+	# chrom_dict[('2', 1)] = chpr.ChrmProf(10000, '2', 1)
 	# chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
 	# chrom_dict[('3', 1)] = chpr.ChrmProf(198295559, '3', 1)
 
@@ -103,40 +105,40 @@ def main(argv):
 	chrom_dict[('5', 1)] = chpr.ChrmProf(186092833, '5', 1)
 	chrom_dict[('6', 0)] = chpr.ChrmProf(170918031, '6', 0)
 	chrom_dict[('6', 1)] = chpr.ChrmProf(170918031, '6', 1)
-	chrom_dict[('7', 0)] = chpr.ChrmProf(159119220, '7', 0)
-	chrom_dict[('7', 1)] = chpr.ChrmProf(159119220, '7', 1)
-	chrom_dict[('8', 0)] = chpr.ChrmProf(146293414, '8', 0)
-	chrom_dict[('8', 1)] = chpr.ChrmProf(146293414, '8', 1)
-	chrom_dict[('9', 0)] = chpr.ChrmProf(141071475, '9', 0)
-	chrom_dict[('9', 1)] = chpr.ChrmProf(141071475, '9', 1)
-	chrom_dict[('10', 0)] = chpr.ChrmProf(135434551, '10', 0)
-	chrom_dict[('10', 1)] = chpr.ChrmProf(135434551, '10', 1)
-	chrom_dict[('11', 0)] = chpr.ChrmProf(134944770, '11', 0)
-	chrom_dict[('11', 1)] = chpr.ChrmProf(134944770, '11', 1)
-	chrom_dict[('12', 0)] = chpr.ChrmProf(133777645, '12', 0)
-	chrom_dict[('12', 1)] = chpr.ChrmProf(133777645, '12', 1)
-	chrom_dict[('13', 0)] = chpr.ChrmProf(115106996, '13', 0)
-	chrom_dict[('13', 1)] = chpr.ChrmProf(115106996, '13', 1)
-	chrom_dict[('14', 0)] = chpr.ChrmProf(107285437, '14', 0)
-	chrom_dict[('14', 1)] = chpr.ChrmProf(107285437, '14', 1)
-	chrom_dict[('15', 0)] = chpr.ChrmProf(102400037, '15', 0)
-	chrom_dict[('15', 1)] = chpr.ChrmProf(102400037, '15', 1)
-	chrom_dict[('16', 0)] = chpr.ChrmProf(90163275, '16', 0)
-	chrom_dict[('16', 1)] = chpr.ChrmProf(90163275, '16', 1)
-	chrom_dict[('17', 0)] = chpr.ChrmProf(81048659, '17', 0)
-	chrom_dict[('17', 1)] = chpr.ChrmProf(81048659, '17', 1)
-	chrom_dict[('18', 0)] = chpr.ChrmProf(78015057, '18', 0)
-	chrom_dict[('18', 1)] = chpr.ChrmProf(78015057, '18', 1)
-	chrom_dict[('19', 0)] = chpr.ChrmProf(59095126, '19', 0)
-	chrom_dict[('19', 1)] = chpr.ChrmProf(59095126, '19', 1)
-	chrom_dict[('20', 0)] = chpr.ChrmProf(62912463, '20', 0)
-	chrom_dict[('20', 1)] = chpr.ChrmProf(62912463, '20', 1)
-	chrom_dict[('21', 0)] = chpr.ChrmProf(48084820, '21', 0)
-	chrom_dict[('21', 1)] = chpr.ChrmProf(48084820, '21', 1)
-	chrom_dict[('22', 0)] = chpr.ChrmProf(51219006, '22', 0)
-	chrom_dict[('22', 1)] = chpr.ChrmProf(51219006, '22', 1)
-	chrom_dict[('23', 0)] = chpr.ChrmProf(155233846, '23', 0)
-	chrom_dict[('23', 1)] = chpr.ChrmProf(155233846, '23', 1)
+	# chrom_dict[('7', 0)] = chpr.ChrmProf(159119220, '7', 0)
+	# chrom_dict[('7', 1)] = chpr.ChrmProf(159119220, '7', 1)
+	# chrom_dict[('8', 0)] = chpr.ChrmProf(146293414, '8', 0)
+	# chrom_dict[('8', 1)] = chpr.ChrmProf(146293414, '8', 1)
+	# chrom_dict[('9', 0)] = chpr.ChrmProf(141071475, '9', 0)
+	# chrom_dict[('9', 1)] = chpr.ChrmProf(141071475, '9', 1)
+	# chrom_dict[('10', 0)] = chpr.ChrmProf(135434551, '10', 0)
+	# chrom_dict[('10', 1)] = chpr.ChrmProf(135434551, '10', 1)
+	# chrom_dict[('11', 0)] = chpr.ChrmProf(134944770, '11', 0)
+	# chrom_dict[('11', 1)] = chpr.ChrmProf(134944770, '11', 1)
+	# chrom_dict[('12', 0)] = chpr.ChrmProf(133777645, '12', 0)
+	# chrom_dict[('12', 1)] = chpr.ChrmProf(133777645, '12', 1)
+	# chrom_dict[('13', 0)] = chpr.ChrmProf(115106996, '13', 0)
+	# chrom_dict[('13', 1)] = chpr.ChrmProf(115106996, '13', 1)
+	# chrom_dict[('14', 0)] = chpr.ChrmProf(107285437, '14', 0)
+	# chrom_dict[('14', 1)] = chpr.ChrmProf(107285437, '14', 1)
+	# chrom_dict[('15', 0)] = chpr.ChrmProf(102400037, '15', 0)
+	# chrom_dict[('15', 1)] = chpr.ChrmProf(102400037, '15', 1)
+	# chrom_dict[('16', 0)] = chpr.ChrmProf(90163275, '16', 0)
+	# chrom_dict[('16', 1)] = chpr.ChrmProf(90163275, '16', 1)
+	# chrom_dict[('17', 0)] = chpr.ChrmProf(81048659, '17', 0)
+	# chrom_dict[('17', 1)] = chpr.ChrmProf(81048659, '17', 1)
+	# chrom_dict[('18', 0)] = chpr.ChrmProf(78015057, '18', 0)
+	# chrom_dict[('18', 1)] = chpr.ChrmProf(78015057, '18', 1)
+	# chrom_dict[('19', 0)] = chpr.ChrmProf(59095126, '19', 0)
+	# chrom_dict[('19', 1)] = chpr.ChrmProf(59095126, '19', 1)
+	# chrom_dict[('20', 0)] = chpr.ChrmProf(62912463, '20', 0)
+	# chrom_dict[('20', 1)] = chpr.ChrmProf(62912463, '20', 1)
+	# chrom_dict[('21', 0)] = chpr.ChrmProf(48084820, '21', 0)
+	# chrom_dict[('21', 1)] = chpr.ChrmProf(48084820, '21', 1)
+	# chrom_dict[('22', 0)] = chpr.ChrmProf(51219006, '22', 0)
+	# chrom_dict[('22', 1)] = chpr.ChrmProf(51219006, '22', 1)
+	# chrom_dict[('23', 0)] = chpr.ChrmProf(155233846, '23', 0)
+	# chrom_dict[('23', 1)] = chpr.ChrmProf(155233846, '23', 1)
 
 	# sub_folder_name = 'n_' + str(n) + '_m_' + str(m) + '_l_' + str(num_mutes)
 	if not os.path.exists(output_folder):
@@ -175,12 +177,15 @@ def main(argv):
 
 		l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(t, n, constants_dict)
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
+		with open(outputFolder + "/dimension", 'w') as f:
+			f.write("(" + str(l) + "," + str(r) + ")")
 		### xf: combine the segment settings from both two alleles and also different node from mutations
 		bool_list = np.random.choice([True, False], r)
 		if constants_dict['snv_mut_lambda'] is None:
 			C = generate_c(t, n, constants_dict, bool_list)
 			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
-			F = generate_f(U, C)
+			###xf: need to be further editted
+			F = generate_f(U, C, l, 0, r, seg_cn_idx_dict, sv_cn_idx_dict, None, constants_dict['deterministic'], None,None,None, None)
 			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 			generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C,
 					   c_p, c_m, a, h, mate_dict, outputFolder)
@@ -189,20 +194,28 @@ def main(argv):
 			output_tsv(F, '/F.tsv', outputFolder)
 
 		else:
+			N = np.random.poisson(constants_dict['read_depth'], (m, r))
 			g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(t)
-			C, C_unsampled_snv, snv_sampled_idx, snv_unsampled_idx = generate_c_snv(t, n, constants_dict, bool_list)
+			C_list, C_unsampled_snv_list, snv_sampled_idx_list, snv_unsampled_idx_list, d_list, d_unsampled_list = generate_c_snv(t, n, constants_dict, bool_list)
 			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
-			F = generate_f(U, C)
-			F_unsampled_snv = generate_f(U, C_unsampled_snv)
+			F_list = []
+			F_unsampled_snv_list = []
 			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
-			generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx,
-					   snv_unsampled_idx, seg_bgn_idx_dict, seg_end_idx_dict, F,
-					   F_unsampled_snv, U, C, c_p, c_m, a, h, mate_dict, outputFolder)
 			output_tsv(U, '/U.tsv', outputFolder)
-			output_tsv(C, '/C.tsv', outputFolder)
-			output_tsv(F, '/F.tsv', outputFolder)
-			output_tsv(F_unsampled_snv, '/F_unsampled_snv.tsv', outputFolder)
-			output_tsv(C_unsampled_snv, '/C_unsampled_snv.tsv', outputFolder)
+			for i in range(len(C_list)):
+				F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i], bool_list)
+				F_list.append(F)
+				#print(F[:, (l+len(snv_sampled_idx_list[i])):])
+				F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i], C_list[i][:, (l+len(snv_sampled_idx_list[i])):], r, seg_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], snv_unsampled_idx_list[i], d_unsampled_list[i], bool_list, N, F[:, (l+len(snv_sampled_idx_list[i])):])
+				F_unsampled_snv_list.append(F_unsampled_snv)
+				generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx_list[i],
+					   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
+					   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, i)
+
+				output_tsv(C_list[i], '/C_' + str(i) + '.tsv', outputFolder)
+				output_tsv(F, '/F_' + str(i) + '.tsv', outputFolder)
+				output_tsv(F_unsampled_snv, '/F_unsampled_snv_' + str(i) + '.tsv', outputFolder)
+				output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv_' + str(i) + '.tsv', outputFolder)
 
 		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
 		pickle.dump(edge_list, edge_list_pickle)
@@ -451,58 +464,86 @@ def make_2d_list(rows, cols):
 	return result
 
 
-def generate_c_snv(tree, n, constants_dict, bool_list, subsample=0.001):
+def generate_c_snv(tree, n, constants_dict, bool_list, subsample_list=[0, 0.001, 0.002, 0.003, 0.005]):
 
 	l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(tree, n, constants_dict)
 	r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(tree, n)
 	g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(tree)
 
-	g_sample = int(g*subsample)
-	snv_sampled_idx = np.sort(np.random.choice(g, size=g_sample, replace=False))
-	snv_unsampled_idx = np.setdiff1d(np.arange(g), snv_sampled_idx)
-	print(snv_unsampled_idx)
+	c_list = []
+	c_unsampled_list = []
+	snv_sampled_idx_list = []
+	snv_unsampled_idx_list = []
+	g_subsample_list = []
+	d_list = []
+	d_unsampled_list = []
+	for subsample in subsample_list:
+		g_subsample_list.append(int(g*subsample))
+	for g_sample_idx in range(len(g_subsample_list)):
+		g_sample = g_subsample_list[g_sample_idx]
+		if g_sample_idx == 0:
+			snv_sampled_idx = np.sort(np.random.choice(g, size=g_sample, replace=False))
+		else:
+			snv_sampled_idx = np.sort(np.append(snv_sampled_idx, np.random.choice(snv_unsampled_idx, size=g_sample - g_subsample_list[g_sample_idx -1], replace=False)))
+		snv_unsampled_idx = np.setdiff1d(np.arange(g), snv_sampled_idx)
+		#print(snv_unsampled_idx)
 
-	c = make_2d_list(len(tree.node_list), (l + g_sample + 2*r))
-	c_unsampled_snv = make_2d_list(len(tree.node_list), (g-g_sample))
-	for idx in tree.node_list:
-		row = idx - 1
-		# add copy number for break points
-		temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
-		for chrom in temp_bp_dict:
-			for (pos, isLeft, chr_,) in temp_bp_dict[chrom]:
-				cp = temp_bp_dict[chrom][(pos, isLeft, chr_)]["copy_num"]
-				col = sv_cn_idx_dict[chrom][(pos, isLeft, chr_)]
-				c[row][col] = cp
+		c = make_2d_list(len(tree.node_list), (l + g_sample + 2*r))
+		d_sampled = np.zeros((l+g_sample))
+		c_unsampled_snv = make_2d_list(len(tree.node_list), (g-g_sample))
+		d_unsampled = np.zeros((g-g_sample))
+		for idx in tree.node_list:
+			row = idx - 1
+			# add copy number for break points
+			temp_bp_dict = tree.idx_node_dict[idx].geneProf.get_sv_read_nums_dict(constants_dict['cov'], constants_dict['read_len'])
+			for chrom in temp_bp_dict:
+				for (pos, isLeft, chr_,) in temp_bp_dict[chrom]:
+					cp = temp_bp_dict[chrom][(pos, isLeft, chr_)]["copy_num"]
+					d = temp_bp_dict[chrom][(pos, isLeft, chr_)]["pm"]
+					col = sv_cn_idx_dict[chrom][(pos, isLeft, chr_)]
+					c[row][col] = cp
+					d_sampled[col] = d
 
-		temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
-		for (chrm, pos) in temp_snv_dict.keys():
-			if snv_cn_idx_dict[(chrm, pos)] in snv_sampled_idx:
-				cp = temp_snv_dict[(chrm, pos)]["copy_num"]
-				col = np.where(snv_sampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0] + l
-				c[row][col] = cp
-			else:
-				cp = temp_snv_dict[(chrm, pos)]["copy_num"]
-				col = np.where(snv_unsampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0]
-				c_unsampled_snv[row][col] = cp
+			temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
+			for (chrm, pos) in temp_snv_dict.keys():
+				if snv_cn_idx_dict[(chrm, pos)] in snv_sampled_idx:
+					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
+					d = temp_snv_dict[(chrm, pos)]["pm"]
+					col = np.where(snv_sampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0] + l
+					c[row][col] = cp
+					d_sampled[col] = d
+				else:
+					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
+					d = temp_snv_dict[(chrm, pos)]["pm"]
+					col = np.where(snv_unsampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0]
+					c_unsampled_snv[row][col] = cp
+					d_unsampled[col] = d
 
-		# add copy number for segments
-		temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
-		for chrom in temp_copy_nums_dict:
-			(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
-			for i in range(len(bgns)):
-				cp1 = cps1[i]
-				cp2 = cps2[i]
-				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
-				for j in range(len(seg_indices_list)):
-					col = seg_indices_list[j] + l + g_sample
-					if bool_list[col-l-g_sample]:
-						c[row][col] = cp1
-						c[row][col + r] = cp2
-					else:
-						c[row][col] = cp2
-						c[row][col + r] = cp1
-	result = np.array(c)
-	return result, np.array(c_unsampled_snv), snv_sampled_idx, snv_unsampled_idx
+			# add copy number for segments
+			temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
+			for chrom in temp_copy_nums_dict:
+				(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
+				for i in range(len(bgns)):
+					cp1 = cps1[i]
+					cp2 = cps2[i]
+					seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
+					for j in range(len(seg_indices_list)):
+						col = seg_indices_list[j] + l + g_sample
+						if bool_list[col-l-g_sample]:
+							c[row][col] = cp1
+							c[row][col + r] = cp2
+						else:
+							c[row][col] = cp2
+							c[row][col + r] = cp1
+		c_list.append(np.array(c))
+		c_unsampled_list.append(np.array(c_unsampled_snv))
+		snv_sampled_idx_list.append(snv_sampled_idx)
+		snv_unsampled_idx_list.append(snv_unsampled_idx)
+		d_list.append(d_sampled)
+		d_unsampled_list.append(d_unsampled)
+
+
+	return c_list, c_unsampled_list, snv_sampled_idx_list, snv_unsampled_idx_list, d_list, d_unsampled_list
 
 # loop through each node in tree(Tree), 
 # for each treeNode: use self.get_copy_nums_dict() to get bgns, ends, cps list for each chromosomes
@@ -595,9 +636,78 @@ def generate_seg_cp_paternal(tree, n, bool_list):
 
 
 # given u (m * (2n-1) matrix) and c ((2n-1)*(l+r) matrix), output f (m * (l+r) matrix)
-def generate_f(u, c):
-	return np.dot(u, c)
+### xf: deterministic f vs. generative f
+def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, det, N, snv_idx_list, d, bool_list):
+	#print(u.shape, c.shape)
+	print(l, g, r, c.shape)
+	print(d)
+	print(c)
+	if det:
+		return np.dot(u, c)
+	else:
+		F_true = np.dot(u, c)
+		F_gen = np.zeros((F_true.shape))
+		sv_tuple_list = []
+		for chrom in sv_cn_idx_dict.keys():
+			for pos_tuple in sv_cn_idx_dict[chrom].keys():
+				print(pos_tuple)
+				sv_tuple_list.append((chrom, pos_tuple[0],sv_cn_idx_dict[chrom][pos_tuple]))
+		sv_tuple_list = sorted(sv_tuple_list, key=lambda a: a[2])
+		snv_tuple_list = list(snv_cn_idx_dict.items())
+		n, _ = c.shape
+		### generate F for CNVs with randomness
+		for i in range(0, r):
+			#print(F_true[:, l+g+i]/(F_true[:, l+g+i] + F_true[:, l+g+i+r]))
+			F_gen[:, l+g+i] = np.random.binomial(((F_true[:, l+g+i] + F_true[:, l+g+i+r])*N[:,i]).astype(int), F_true[:, l+g+i]/(F_true[:, l+g+i] + F_true[:, l+g+i+r]))/N[:,i]
+			F_gen[:, l+g+r+i] = (F_true[:, l+g+i] + F_true[:, l+g+i+r]) - F_gen[:, l+g+i]
+		### generate F for SVs with randomness, given the generated CNVs
+		for (sv_chr, sv_pos, sv_idx) in sv_tuple_list:
+			cnv_idx = search_sv_cnv_num(sv_chr, sv_pos, seg_cn_idx_dict)
+			adj_cnv_idx = cnv_idx + int(int(d[sv_idx]) == int(bool_list[cnv_idx]))*r
+			#print("p", F_true[:, sv_idx],F_true[:, l+g+adj_cnv_idx])
+			F_gen[:, sv_idx] = np.random.binomial((F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))/N[:, cnv_idx]
+		for i in range(0, len(snv_tuple_list)):
+			(snv_chr, snv_pos), snv_idx = snv_tuple_list[i]
+			if snv_idx in snv_idx_list:
+				snv_new_idx = np.where(snv_idx_list == snv_idx)[0][0]
+				cnv_idx = search_sv_cnv_num(snv_chr, snv_pos, seg_cn_idx_dict)
+				adj_cnv_idx = cnv_idx + int(int(d[l+snv_idx]) == int(bool_list[cnv_idx])) * r
+				F_gen[:, l+snv_new_idx] = np.random.binomial((F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])/N[:, cnv_idx]
+		print(np.sqrt(np.mean(np.square(F_gen - F_true))))
+		return F_gen
 
+
+def generate_f_unsampled(u, c, c_cn, r, seg_cn_idx_dict, snv_cn_idx_dict, det, snv_un_idx_list, d_unsampled, bool_list, N, F_gen_cn):
+	print(u.shape, c.shape)
+
+	if det:
+		return np.dot(u, c)
+	else:
+		F_true_unsampled = np.dot(u, c)
+		F_gen_unsampled = np.zeros((F_true_unsampled.shape))
+		F_true_cn = np.dot(u, c_cn)
+		sv_tuple_list = []
+		snv_tuple_list = list(snv_cn_idx_dict.items())
+		n, _ = c.shape
+		### generate F for SVs with randomness
+		for i in range(0, len(snv_tuple_list)):
+			(snv_chr, snv_pos), snv_idx = snv_tuple_list[i]
+			if snv_idx in snv_un_idx_list:
+				snv_new_idx = np.where(snv_un_idx_list == snv_idx)[0][0]
+				cnv_idx = search_sv_cnv_num(snv_chr, snv_pos, seg_cn_idx_dict)
+				adj_cnv_idx = cnv_idx + int(int(d_unsampled[snv_new_idx]) == int(bool_list[cnv_idx])) * r
+				print(F_true_unsampled[:, snv_new_idx], F_true_cn[:,adj_cnv_idx])
+				F_gen_unsampled[:, snv_new_idx] = np.random.binomial((F_gen_cn[:, adj_cnv_idx] * N[:, cnv_idx]).astype(int),
+					F_true_unsampled[:, snv_new_idx] / F_true_cn[:,adj_cnv_idx]) / N[:,cnv_idx]
+
+				# F_gen[:, snv_new_idx] = np.random.binomial(N, F_true[:, snv_new_idx]/(F_cn[:, cnv_idx] + F_cn[:, cnv_idx+r]))/(N*(F_cn[:, cnv_idx] + F_cn[:, cnv_idx+r]))
+		return F_gen_unsampled
+
+
+def search_sv_cnv_num(sv_chr, sv_pos, seg_cn_idx_dict):
+	for (bgn, end), cnv_idx in seg_cn_idx_dict[sv_chr].items():
+		if bgn <= sv_pos <= end:
+			return cnv_idx
 
 # return matrix a, matrix h, and dictionary mate_dict
 # matrix a: a ((2n-1) * l) matrix contains mated_reads info
@@ -668,7 +778,7 @@ def get_snv_rec_id(snv_idx, g):
 # a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 # generate a vcf file for each sample
 def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx, snv_unsampled_idx,
-			   seg_bgn_idx_dict, seg_end_idx_dict, F, F_unsampled_snv, U, C, c_p, c_m, a, h, mate_dict, outputFolder):
+			   seg_bgn_idx_dict, seg_end_idx_dict, F, F_unsampled_snv, U, C, c_p, c_m, a, h, mate_dict, outputFolder, sample_prob_idx):
 	vcf_reader = vcf.Reader(open(metaFile, 'r'))
 	vcf_reader.metadata['filedate'][0] = datetime.datetime.now().date().strftime('%Y%m%d') # set date to current date
 	f_p = np.dot(U, c_p)
@@ -677,9 +787,11 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 	mixed_h = np.dot(U, h) # m * l
 	for i in range(len(U)):
 		sample_idx = i + 1
-		temp_file = outputFolder + '/sample' + str(sample_idx) + '.vcf'
+		if not os.path.exists(outputFolder + '/sample' + str(sample_prob_idx) + '/'):
+			os.mkdir(outputFolder + '/sample' + str(sample_prob_idx))
+		temp_file = outputFolder + '/sample' + str(sample_prob_idx) + '/sample' + str(sample_idx) + '.vcf'
 		temp_writer = vcf.Writer(open(temp_file, 'w'), vcf_reader)
-		temp_file_unsampled_snv = outputFolder + '/unsampled_snv_sample' + str(sample_idx) + '.vcf'
+		temp_file_unsampled_snv = outputFolder + '/unsampled_snv_sample' + '_' + str(sample_prob_idx) + '_' + str(sample_idx) + '.vcf'
 		temp_writer_unsampled_snv = vcf.Writer(open(temp_file_unsampled_snv, 'w'), vcf_reader)
 		alt_type, gt_cnv = 'CNV', '1|1' # constants for all cnv records
 		for chrom in sorted(seg_cn_idx_dict.keys(),key=int):
@@ -687,7 +799,7 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 				pos = key[0]
 				rec_id = get_cnv_rec_id(val, r)
 				info_end = key[1]
-				cn = [f_p[i][val], f_m[i][val]]
+				cn = [F[i][l + len(snv_sampled_idx) + val], F[i][l + len(snv_sampled_idx) + r + val]]
 				temp_writer.write_record(generate_cnv(chrom, pos, rec_id, alt_type, info_end, gt_cnv, cn))
 
 		alt_ori, alt_cS, alt_wMA, gt_sv = True, str(), True, '1|0' # constants for all sv records
@@ -755,7 +867,6 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict,
 				temp_writer.write_record(
 					generate_sv(chrom, pos, rec_id, alt_chr, alt_pos, alt_ori, alt_rO, alt_cS, alt_wMA, info_mateid,
 								gt_sv, cnadj, bdp, dp))
-
 
 
 # chrom(str), pos(int), rec_id(str), ref(str), qual = None, filter(list), fmt = 'GT:CNADJ', sample = ['TUMOR', 'NORMAL']
@@ -1009,6 +1120,8 @@ def get_args(argv):
 	parser.add_argument('-s', '--expect_mut_len', type = int, dest = "size_mutes", required = True)
 	parser.add_argument('-o', '--output_folder', type = str, dest = "output_folder", required = True)
 	parser.add_argument('-p', '--num_patients', type=int, dest="num_patients", default=5)
+	parser.add_argument('-d', '--deterministic_model', type=bool, dest='deterministic', default=True)
+	parser.add_argument('-rd', '--read_depth', type=int, dest='read_depth', default=50)
 	return vars(parser.parse_args(argv))
 
 
