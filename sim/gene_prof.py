@@ -265,7 +265,7 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
-								print(others[tup_chr][tup_pos]["mate"] == others_p[tup_chr][tup_pos]["mate"])
+								#print(others[tup_chr][tup_pos]["mate"] == others_p[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mated_reads"] += others_p[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_p[tup_chr][tup_pos]["total_reads"]
 								others[tup_chr][tup_pos]["copy_num"] += others_p[tup_chr][tup_pos]["copy_num"]
@@ -283,7 +283,7 @@ class GeneProf:
 							if tup_pos not in others[tup_chr].keys():
 								others[tup_chr][tup_pos] = value
 							else:
-								print(others[tup_chr][tup_pos]["mate"] == others_m[tup_chr][tup_pos]["mate"])
+								#print(others[tup_chr][tup_pos]["mate"] == others_m[tup_chr][tup_pos]["mate"])
 								others[tup_chr][tup_pos]["mated_reads"] += others_m[tup_chr][tup_pos]["mated_reads"]
 								others[tup_chr][tup_pos]["total_reads"] += others_m[tup_chr][tup_pos]["total_reads"]
 								others[tup_chr][tup_pos]["copy_num"] += others_m[tup_chr][tup_pos]["copy_num"]
@@ -321,7 +321,7 @@ class GeneProf:
 				result[idx] = temp
 		for (chr, pm) in others.keys():
 			for (pos, isLeft, chr_, pm_) in others[(chr, pm)]:
-				print (pos, isLeft, chr_, pm_)
+				#print (pos, isLeft, chr_, pm_)
 				assert chr_ == chr
 				assert pm_ == pm
 				if (pos, isLeft, chr) in result[chr].keys():
