@@ -26,7 +26,7 @@ import file_manager as fm
 #  input: in_dir (str) full path to input directory containing .vcf file(s)
 # output: bp_attr (dict) key is breakpoint index. val is tuple (chrm (str), pos (int), extends_left (bool))
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def get_mats(in_dir):
+def get_mats(in_dir, n):
     print("get mats")
     sampleList = fm._fnames_with_extension(in_dir, '.vcf')
 
@@ -53,18 +53,20 @@ def get_mats(in_dir):
 
     SNV_idx_dict, g = get_snv_idx_dict(SNV_sample_dict)
 
-    F, F_phasing, Q, A, H, cv_attr, F_info_phasing = make_matrices(m, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict)
+    F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing = make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict)
     bp_attr = _inv_dic(BP_idx_dict)
 
-    F = np.array(F).astype(float)
     F_phasing = np.array(F_phasing).astype(float)
+    F_unsampled_phasing = np.array(F_unsampled_phasing).astype(float)
     F_info_phasing = np.array(F_info_phasing)
+    F_unsampled_info_phasing = np.array(F_unsampled_info_phasing)
     Q = np.array(Q)
+    Q_unsampled = np.array(Q_unsampled)
     G = make_G(BP_idx_dict, bp_id_to_mate_id, bp_id_to_tuple)
 
     abnormal_idx = np.where(np.sum(Q, 1) == 0)[0]
-    print(abnormal_idx)
-    F = np.delete(F, abnormal_idx, axis=1)
+    print("The mutations at ", abnormal_idx, " will be removed due to non-existing bp in CNV")
+    #F = np.delete(F, abnormal_idx, axis=1)
     F_phasing = np.delete(F_phasing, abnormal_idx, axis=1)
     F_info_phasing = np.delete(F_info_phasing, abnormal_idx, axis=0)
 
@@ -84,12 +86,21 @@ def get_mats(in_dir):
     G = np.delete(G, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=1)
 
+    abnormal_idx_unsampled = np.where(np.sum(Q_unsampled, 1) == 0)[0]
+    print("The mutations at ", abnormal_idx_unsampled, " will be removed due to non-existing bp in CNV")
+    # F = np.delete(F, abnormal_idx, axis=1)
+    F_unsampled_phasing = np.delete(F_unsampled_phasing, abnormal_idx_unsampled, axis=1)
+    F_unsampled_info_phasing = np.delete(F_unsampled_info_phasing, abnormal_idx_unsampled, axis=0)
+
+    Q = np.delete(Q, abnormal_idx, axis=0)
+
     l_g, r = Q.shape
     l, _ = G.shape
     g = l_g - l
     A = A[0:m, 0:l] #empty matrix
     H = H[0:m, 0:l]
-    return F, F_phasing, Q, G, A, H, bp_attr, cv_attr, F_info_phasing
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing
+
 
 #  input: bp_id_to_mate_id
 #         BP_idx_dict[(chrom, pos, direction)] == bp_index
@@ -124,25 +135,104 @@ def make_3d_list(r,c,d):
     return result
 
 # output: cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def make_matrices(m, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict):
+def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict):
+    const = 5
     print("make matrices")
-    F, F_phasing, Q, A, H = make_2d_list(m, l + g + r), make_2d_list(m, l + g + 2*r), make_2d_list(l+g, r), make_2d_list(m, l), make_2d_list(m, l)
-    F_info_phasing = make_2d_list(l+g+2*r, 3)
+
+    if l + g <= const * n:
+        F_phasing, Q, A, H = make_2d_list(m, l + g + 2 * r), make_2d_list(l + g,r), \
+                                make_2d_list(m, l), make_2d_list(m, l)
+        F_info_phasing = make_2d_list(l + g + 2 * r, 3)
+        F_SV = F_phasing[:][:l]
+        F_SV_info = F_info_phasing[:l]
+        F_SNV = F_phasing[:][l:(l+g)]
+        F_SNV_info = F_info_phasing[l:(l + g)]
+        F_SNV_unsampled = None
+        F_SNV_unsampled_info = None
+        F_CNV = F_phasing[:][(l+g):]
+        F_CNV_info = F_info_phasing[(l+g):]
+        Q_unsampled = None
+        for (chrom, pos), snv_idx in SNV_idx_dict.items():
+            F_SNV_info[snv_idx][0] = chrom
+            F_SNV_info[snv_idx][1] = pos
+            F_SNV_info[snv_idx][2] = "snv"
+        sampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
+        unsampled_snv_idx_list_sorted = np.array([])
+    elif l <= const * n:
+        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = make_2d_list(m, const * n + 2 * r), make_2d_list(m, l + g - const*n), \
+            make_2d_list(const * n, r), make_2d_list(l + g - const*n, r), make_2d_list(m, l), make_2d_list(m, l)
+        F_info_phasing, F_unsampled_info_phasing = make_2d_list(const * n + 2 * r, 3), make_2d_list(l + g - const*n, 3)
+        F_SV = F_phasing[:][:l]
+        F_SV_info = F_info_phasing[:l]
+        Q_SV = Q[:l]
+        F_SNV = F_phasing[:][l:const * n]
+        F_SNV_info = F_info_phasing[l:const * n]
+        Q_SNV = Q[l:]
+        F_SNV_unsampled = F_unsampled_phasing
+        F_SNV_unsampled_info = F_unsampled_info_phasing
+        Q_SNV_unsampled = Q_unsampled
+        F_CNV = F_phasing[:][const * n:]
+        F_CNV_info = F_info_phasing[const * n:]
+        sampled_snv_idx_list_sorted = []
+        sampled_list = np.random.choice(a=len(SNV_idx_dict), size=n * const - l, replace=False)
+        unsampled_snv_idx_list_sorted = []
+        for i in np.arange(len(SNV_idx_dict)):
+            if i in sampled_list:
+                sampled_snv_idx_list_sorted.append(i)
+            else:
+                unsampled_snv_idx_list_sorted.append(i)
+        sampled_snv_idx_list_sorted = np.array(sampled_snv_idx_list_sorted)
+        unsampled_snv_idx_list_sorted = np.array(unsampled_snv_idx_list_sorted)
+
+    elif l > const * n:
+        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H =  make_2d_list(m, l + 2 * r), make_2d_list(m, g), make_2d_list(l, r), \
+                    make_2d_list(g, r), make_2d_list(m, l), make_2d_list(m, l)
+        F_info_phasing, F_unsampled_info_phasing = make_2d_list(l + 2 * r, 3), make_2d_list(g, 3)
+        F_SV = F_phasing[:][:l]
+        F_SV_info = F_info_phasing[:l]
+        Q_SV = Q[:l]
+        F_SNV = None
+        F_SNV_info = None
+        Q_SNV = None
+        F_SNV_unsampled = F_unsampled_phasing
+        F_SNV_unsampled_info = F_unsampled_info_phasing
+        Q_SNV_unsampled = Q_unsampled
+        F_CNV = F_phasing[:][l:]
+        F_CNV_info = F_info_phasing[l:]
+        for (chrom, pos), snv_idx in SNV_idx_dict.items():
+            F_SNV_unsampled_info[snv_idx][0] = chrom
+            F_SNV_unsampled_info[snv_idx][1] = pos
+            F_SNV_unsampled_info[snv_idx][2] = "snv"
+        sampled_snv_idx_list_sorted = np.array([])
+        unsampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
+
+    else:
+        raise Exception("Error during making matrices")
+
     for (chrom, pos, dir), bp_idx in BP_idx_dict.items():
-        F_info_phasing[bp_idx][0] = chrom
-        F_info_phasing[bp_idx][1] = pos
-        F_info_phasing[bp_idx][2] = "sv"
+        F_SV_info[bp_idx][0] = chrom
+        F_SV_info[bp_idx][1] = pos
+        F_SV_info[bp_idx][2] = "sv"
+
     for (chrom, pos), snv_idx in SNV_idx_dict.items():
-        F_info_phasing[l+snv_idx][0] = chrom
-        F_info_phasing[l+snv_idx][1] = pos
-        F_info_phasing[l + snv_idx][2] = "snv"
+        if snv_idx in sampled_snv_idx_list:
+            new_idx = np.where(sampled_snv_idx_list_sorted == snv_idx)[0]
+            F_SNV_info[new_idx][0] = chrom
+            F_SNV_info[new_idx][1] = pos
+            F_SNV_info[new_idx][2] = "snv"
+        else:
+            new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0]
+            F_SNV_unsampled_info[new_idx][0] = chrom
+            F_SNV_unsampled_info[new_idx][1] = pos
+            F_SNV_unsampled_info[new_idx][2] = "snv"
+
     for (chrom, startpos), cn_idx in CN_startPos_dict.items():
-        F_info_phasing[l+g+cn_idx][0] = chrom
-        F_info_phasing[l+g+cn_idx][1] = startpos
-        F_info_phasing[l + g + cn_idx][2] = "cnv"
-        F_info_phasing[l + g + cn_idx + r][0] = chrom
-        F_info_phasing[l + g + cn_idx + r][1] = startpos
-        F_info_phasing[l + g + cn_idx + r][2] = "cnv"
+        F_CNV_info[cn_idx][0] = chrom
+        F_CNV_info[cn_idx][1] = startpos
+        F_CNV_info[cn_idx][2] = "cnv"
+        F_CNV_info[cn_idx + r][0] = chrom
+        F_CNV_info[cn_idx + r][1] = startpos
+        F_CNV_info[cn_idx + r][2] = "cnv"
     # for (chrom, endpos), cn_idx in CN_endPos_dict:
     #     assert(F_info_phasing[l+g+cn_idx][0] == chrom)
     #     F_info_phasing[l+g+cn_idx][2] = endpos
@@ -160,23 +250,23 @@ def make_matrices(m, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_samp
                     # cn, direction, bdp, dp = temp_bp_info_dict['cn'], temp_bp_info_dict['dir'], temp_bp_info_dict['bdp'], temp_bp_info_dict['dp']
                     cn, direction, = temp_bp_info_dict['cn'], temp_bp_info_dict['dir']
                     bp_idx = BP_idx_dict[(chrom, pos, direction)]
-                    F[sample_idx][bp_idx] = cn
-                    F_phasing[sample_idx][bp_idx] = cn
+                    #F[sample_idx][bp_idx] = cn
+                    F_SV[sample_idx][bp_idx] = cn
 
                     # A[sample_idx][bp_idx] = bdp
                     # H[sample_idx][bp_idx] = dp
 
                     if direction == False and (chrom, pos) in CN_endPos_dict:
                         cn_idx = CN_endPos_dict[(chrom, pos)]
-                        Q[bp_idx][cn_idx] = 1
+                        Q_SV[bp_idx][cn_idx] = 1
                     elif direction == True and (chrom, pos) in CN_startPos_dict:
                         cn_idx = CN_startPos_dict[(chrom, pos)]
-                        Q[bp_idx][cn_idx] = 1
+                        Q_SV[bp_idx][cn_idx] = 1
                     else: # search through all posible segments where bp could lie
                         if chrom in seg_dic.keys():
                             cn_idx = _get_seg_idx(seg_dic[chrom], pos)
                             if cn_idx != None:
-                                Q[bp_idx][cn_idx] = 1
+                                Q_SV[bp_idx][cn_idx] = 1
                             else:
                                 print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(pos) + " is not found in copy number info.")
                         else:
@@ -186,19 +276,32 @@ def make_matrices(m, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_samp
         for chrom, pos in SNV_sample_dict[sample].keys():
             snv_idx = SNV_idx_dict[(chrom, pos)]
             cn = SNV_sample_dict[sample][(chrom, pos)]
-            F[sample_idx][l + snv_idx] = cn
-            F_phasing[sample_idx][l + snv_idx] = cn
-            if chrom in seg_dic.keys():
-                cn_idx = _get_seg_idx(seg_dic[chrom], pos)
-                if cn_idx != None:
-                    Q[l + snv_idx][cn_idx] = 1
+            if snv_idx in sampled_snv_idx_list_sorted:
+                new_idx = np.where(sampled_snv_idx_list_sorted == snv_idx)[0]
+                F_SNV[sample_idx][new_idx] = cn
+                if chrom in seg_dic.keys():
+                    cn_idx = _get_seg_idx(seg_dic[chrom], pos)
+                    if cn_idx != None:
+                        Q_SNV[l + snv_idx][cn_idx] = 1
+                    else:
+                        print("snv at chr " + str(chrom) + " pos " + str(
+                            pos) + " is not found in copy number info.")
                 else:
-                    print("snv at chr " + str(chrom) + " pos " + str(
+                    print("snv id at chr " + str(chrom) + " pos " + str(
                         pos) + " is not found in copy number info.")
             else:
-                print("snv id at chr " + str(chrom) + " pos " + str(
-                    pos) + " is not found in copy number info.")
-
+                new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0]
+                F_SNV_unsampled[sample_idx][new_idx] = cn
+                if chrom in seg_dic.keys():
+                    cn_idx = _get_seg_idx(seg_dic[chrom], pos)
+                    if cn_idx != None:
+                        Q_SNV_unsampled[l + snv_idx][cn_idx] = 1
+                    else:
+                        print("snv at chr " + str(chrom) + " pos " + str(
+                            pos) + " is not found in copy number info.")
+                else:
+                    print("snv id at chr " + str(chrom) + " pos " + str(
+                        pos) + " is not found in copy number info.")
         for chrom in CN_sample_rec_dict[sample]:
             for (s,e) in CN_sample_rec_dict[sample][chrom]:
                 cn_idx_list = get_CN_indices(CN_startPos_dict, CN_endPos_dict, chrom, s, e)
@@ -206,14 +309,13 @@ def make_matrices(m, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_samp
                 cn_minor = CN_sample_rec_dict_minor[sample][chrom][(s, e)]
                 cn_major = CN_sample_rec_dict_major[sample][chrom][(s, e)]
                 for cn_idx in cn_idx_list:
-                    F[sample_idx][cn_idx + l + g] = cn
-                    F_phasing[sample_idx][cn_idx + l + g] = cn_minor
-                    F_phasing[sample_idx][cn_idx + l + g + r] = cn_major
+                    F_CNV[sample_idx][cn_idx + l + g] = cn_minor
+                    F_CNV[sample_idx][cn_idx + l + g + r] = cn_major
 
     # create dictionary with key as segment index and val as tuple containing (chrm, bgn, end)
     cv_attr = { i: (chrm, bgn, end) for chrm, lst in seg_dic.iteritems() for (i, bgn, end) in lst }
 
-    return F, F_phasing, Q, A, H, cv_attr, F_info_phasing
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing
     ### A and H are empty lists
 
 #  input: segs (list of tuple) tuple is ( seg_idx, bgn_pos, end_pos ) for segments of a single chromosome

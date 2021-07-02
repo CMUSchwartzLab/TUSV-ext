@@ -50,9 +50,9 @@ MAX_SOLVER_ITERS = 5000
 #  notes: l (int) is number of structural variants. r (int) is number of copy number regions, 2r means we phase it for allelic copy numbers,
 #         g (int) is number of single nucleotide variants.
 
-def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
+def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
     np.random.seed()  # sets seed for running on multiple processors
-    m = len(F)
+    m = len(F_phasing)
     l_g_sample, r = Q.shape
     l,_ = G.shape
     g = l_g_sample - l
@@ -62,9 +62,9 @@ def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_li
         if i == 0:
             U = gen_U(m, n)
         else:
-            U = get_U(F, F_phasing, C, n, R, W, l)
+            U = get_U(F_phasing, C, n, R, W, l)
 
-        obj_val, C, E, R, W, W_sv, W_snv, err_msg = get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
+        obj_val, C, E, R, W, W_sv, W_snv, err_msg = get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
 
         # handle errors
         if err_msg != None:
@@ -83,7 +83,7 @@ def get_UCE(F, F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_li
 #         C (np.array of int) [2n-1, l+g+2r] int copy number c_k,s of mutation s in clone k
 #         n (int) number of leaves in phylogeny. 2n-1 is total number of nodes
 # output: U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
-def get_U(F, F_phasing, C, n, R, W_node, l):
+def get_U(F_phasing, C, n, R, W_node, l):
     m, L = F_phasing.shape  ### xf: L=l(+g)+2r depending on if SNVs are included
     N = 2 * n - 1
     mod = gp.Model('tusv')
@@ -130,7 +130,7 @@ def get_U(F, F_phasing, C, n, R, W_node, l):
 #         W_all (np.array of int) [2n-1, 2n-1] number of breakpoints appearing along each edge in tree
 #         err_msg (None or str) None if no error occurs. str with error message if one does
 #  notes: l (int) is number of structural variants. r (int) is number of copy number regions
-def get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
+def get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     l_g, r = Q.shape
     l, _ = G.shape
     g = l_g - l
@@ -149,8 +149,8 @@ def get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     C_bin = _get_bin_rep(mod, C, c_max)
     Gam = _get_gp_3D_arr_int_var(mod, N, l+g, 2, c_max)
 
-    F_seg = F[:, l+g:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
-    Pi = np_divide_0(F[:, :l+g], F_seg)  # [m, l] expected bpf (ratio of bp copy num to segment copy num)
+    F_seg = (F_phasing[:, l_g:-r] + F_phasing[:, -r:]).dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
+    Pi = np_divide_0(F_phasing[:, :l_g], F_seg)  # [m, l] expected bpf (ratio of bp copy num to segment copy num)
 
     _set_copy_num_constraints(mod, C, n, l, g, r)
     _set_tree_constraints(mod, E, n)
@@ -162,7 +162,7 @@ def get_C(F, F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, g, r, D, c_max)
     _set_bpf_penalty(mod, S, Pi, U, C, Gam)
 
-    mod.setObjective(_get_objective(mod, F, F_phasing, U, C, R, S, lamb1, lamb2), gp.GRB.MINIMIZE)
+    mod.setObjective(_get_objective(mod, F_phasing, U, C, R, S, lamb1, lamb2), gp.GRB.MINIMIZE)
 
     mod.params.MIPFocus = 1
     if time_limit != None:
@@ -370,7 +370,7 @@ def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
 #   OBJECTIVE
 #
 
-def _get_objective(mod, F, F_phasing, U, C, R, S, lamb1, lamb2):  # returns expression for objective
+def _get_objective(mod, F_phasing, U, C, R, S, lamb1, lamb2):  # returns expression for objective
     m, L = F_phasing.shape
     N, _ = C.shape
     _, l = S.shape
