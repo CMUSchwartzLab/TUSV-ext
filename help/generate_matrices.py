@@ -53,7 +53,8 @@ def get_mats(in_dir, n):
 
     SNV_idx_dict, g = get_snv_idx_dict(SNV_sample_dict)
 
-    F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing = make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict)
+    F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort\
+        = make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict)
     bp_attr = _inv_dic(BP_idx_dict)
 
     F_phasing = np.array(F_phasing).astype(float)
@@ -79,7 +80,7 @@ def get_mats(in_dir, n):
     H = np.array(H)
 
     abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
-    F = np.delete(F, abnormal_idx2, axis=1)
+    # F = np.delete(F, abnormal_idx2, axis=1)
     F_phasing = np.delete(F_phasing, abnormal_idx2, axis=1)
     F_info_phasing = np.delete(F_info_phasing, abnormal_idx2, axis=0)
     Q = np.delete(Q, abnormal_idx2, axis=0)
@@ -99,7 +100,7 @@ def get_mats(in_dir, n):
     g = l_g - l
     A = A[0:m, 0:l] #empty matrix
     H = H[0:m, 0:l]
-    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort
 
 
 #  input: bp_id_to_mate_id
@@ -136,45 +137,45 @@ def make_3d_list(r,c,d):
 
 # output: cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
 def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict):
-    const = 5
+    const = 10
     print("make matrices")
 
-    if l + g <= const * n:
-        F_phasing, Q, A, H = make_2d_list(m, l + g + 2 * r), make_2d_list(l + g,r), \
-                                make_2d_list(m, l), make_2d_list(m, l)
+    if l + g <= const * (2*n-1):
+        F_phasing, Q, A, H = np.zeros((m, l + g + 2 * r)), np.zeros((l + g,r)), \
+                                np.zeros((m, l)), np.zeros((m, l))
         F_info_phasing = make_2d_list(l + g + 2 * r, 3)
-        F_SV = F_phasing[:][:l]
+        F_SV = F_phasing[:,:l]
         F_SV_info = F_info_phasing[:l]
-        F_SNV = F_phasing[:][l:(l+g)]
+        F_SNV = F_phasing[:,l:(l+g)]
         F_SNV_info = F_info_phasing[l:(l + g)]
         F_SNV_unsampled = None
         F_SNV_unsampled_info = None
-        F_CNV = F_phasing[:][(l+g):]
+        F_CNV = F_phasing[:,(l+g):]
         F_CNV_info = F_info_phasing[(l+g):]
         Q_unsampled = None
-        for (chrom, pos), snv_idx in SNV_idx_dict.items():
-            F_SNV_info[snv_idx][0] = chrom
-            F_SNV_info[snv_idx][1] = pos
-            F_SNV_info[snv_idx][2] = "snv"
+        # for (chrom, pos), snv_idx in SNV_idx_dict.items():
+        #     F_SNV_info[snv_idx][0] = chrom
+        #     F_SNV_info[snv_idx][1] = pos
+        #     F_SNV_info[snv_idx][2] = "snv_" + str(snv_idx)
         sampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
         unsampled_snv_idx_list_sorted = np.array([])
-    elif l <= const * n:
-        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = make_2d_list(m, const * n + 2 * r), make_2d_list(m, l + g - const*n), \
-            make_2d_list(const * n, r), make_2d_list(l + g - const*n, r), make_2d_list(m, l), make_2d_list(m, l)
-        F_info_phasing, F_unsampled_info_phasing = make_2d_list(const * n + 2 * r, 3), make_2d_list(l + g - const*n, 3)
-        F_SV = F_phasing[:][:l]
+    elif l <= const * (2*n-1):
+        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = np.zeros((m, const * (2*n-1) + 2 * r)), np.zeros((m, l + g - const * (2*n-1))), \
+            np.zeros((const * (2*n-1), r)), np.zeros((l + g - const * (2*n-1), r)), np.zeros((m, l)), np.zeros((m, l))
+        F_info_phasing, F_unsampled_info_phasing = make_2d_list(const * (2*n-1) + 2 * r, 3), make_2d_list(l + g - const*(2*n-1), 3)
+        F_SV = F_phasing[:,:l]
         F_SV_info = F_info_phasing[:l]
         Q_SV = Q[:l]
-        F_SNV = F_phasing[:][l:const * n]
-        F_SNV_info = F_info_phasing[l:const * n]
+        F_SNV = F_phasing[:,l:const * (2*n-1)]
+        F_SNV_info = F_info_phasing[l:const * (2*n-1)]
         Q_SNV = Q[l:]
         F_SNV_unsampled = F_unsampled_phasing
         F_SNV_unsampled_info = F_unsampled_info_phasing
         Q_SNV_unsampled = Q_unsampled
-        F_CNV = F_phasing[:][const * n:]
-        F_CNV_info = F_info_phasing[const * n:]
+        F_CNV = F_phasing[:,const * (2*n-1):]
+        F_CNV_info = F_info_phasing[const * (2*n-1):]
         sampled_snv_idx_list_sorted = []
-        sampled_list = np.random.choice(a=len(SNV_idx_dict), size=n * const - l, replace=False)
+        sampled_list = np.random.choice(a=len(SNV_idx_dict), size=(2*n-1) * const - l, replace=False)
         unsampled_snv_idx_list_sorted = []
         for i in np.arange(len(SNV_idx_dict)):
             if i in sampled_list:
@@ -184,11 +185,11 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
         sampled_snv_idx_list_sorted = np.array(sampled_snv_idx_list_sorted)
         unsampled_snv_idx_list_sorted = np.array(unsampled_snv_idx_list_sorted)
 
-    elif l > const * n:
-        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H =  make_2d_list(m, l + 2 * r), make_2d_list(m, g), make_2d_list(l, r), \
-                    make_2d_list(g, r), make_2d_list(m, l), make_2d_list(m, l)
+    elif l > const * (2*n-1):
+        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H =  np.zeros((m, l + 2 * r)), np.zeros((m, g)), np.zeros((l, r)), \
+                    np.zeros((g, r)), np.zeros((m, l)), np.zeros((m, l))
         F_info_phasing, F_unsampled_info_phasing = make_2d_list(l + 2 * r, 3), make_2d_list(g, 3)
-        F_SV = F_phasing[:][:l]
+        F_SV = F_phasing[:,:l]
         F_SV_info = F_info_phasing[:l]
         Q_SV = Q[:l]
         F_SNV = None
@@ -197,12 +198,12 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
         F_SNV_unsampled = F_unsampled_phasing
         F_SNV_unsampled_info = F_unsampled_info_phasing
         Q_SNV_unsampled = Q_unsampled
-        F_CNV = F_phasing[:][l:]
+        F_CNV = F_phasing[:,l:]
         F_CNV_info = F_info_phasing[l:]
-        for (chrom, pos), snv_idx in SNV_idx_dict.items():
-            F_SNV_unsampled_info[snv_idx][0] = chrom
-            F_SNV_unsampled_info[snv_idx][1] = pos
-            F_SNV_unsampled_info[snv_idx][2] = "snv"
+        # for (chrom, pos), snv_idx in SNV_idx_dict.items():
+        #     F_SNV_unsampled_info[snv_idx][0] = chrom
+        #     F_SNV_unsampled_info[snv_idx][1] = pos
+        #     F_SNV_unsampled_info[snv_idx][2] = "snv_" + str(snv_idx)
         sampled_snv_idx_list_sorted = np.array([])
         unsampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
 
@@ -212,27 +213,28 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
     for (chrom, pos, dir), bp_idx in BP_idx_dict.items():
         F_SV_info[bp_idx][0] = chrom
         F_SV_info[bp_idx][1] = pos
-        F_SV_info[bp_idx][2] = "sv"
+        F_SV_info[bp_idx][2] = "sv_" + str(bp_idx)
 
     for (chrom, pos), snv_idx in SNV_idx_dict.items():
-        if snv_idx in sampled_snv_idx_list:
-            new_idx = np.where(sampled_snv_idx_list_sorted == snv_idx)[0]
+        if snv_idx in sampled_snv_idx_list_sorted:
+            new_idx = np.where(sampled_snv_idx_list_sorted == snv_idx)[0][0]
             F_SNV_info[new_idx][0] = chrom
             F_SNV_info[new_idx][1] = pos
-            F_SNV_info[new_idx][2] = "snv"
+            F_SNV_info[new_idx][2] = "snv_" + str(snv_idx)
         else:
-            new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0]
+            new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0][0]
+            print(new_idx)
             F_SNV_unsampled_info[new_idx][0] = chrom
             F_SNV_unsampled_info[new_idx][1] = pos
-            F_SNV_unsampled_info[new_idx][2] = "snv"
+            F_SNV_unsampled_info[new_idx][2] = "snv_" + str(snv_idx)
 
     for (chrom, startpos), cn_idx in CN_startPos_dict.items():
         F_CNV_info[cn_idx][0] = chrom
         F_CNV_info[cn_idx][1] = startpos
-        F_CNV_info[cn_idx][2] = "cnv"
+        F_CNV_info[cn_idx][2] = "cnv" + str(cn_idx)
         F_CNV_info[cn_idx + r][0] = chrom
         F_CNV_info[cn_idx + r][1] = startpos
-        F_CNV_info[cn_idx + r][2] = "cnv"
+        F_CNV_info[cn_idx + r][2] = "cnv" + str(cn_idx)
     # for (chrom, endpos), cn_idx in CN_endPos_dict:
     #     assert(F_info_phasing[l+g+cn_idx][0] == chrom)
     #     F_info_phasing[l+g+cn_idx][2] = endpos
@@ -277,12 +279,12 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
             snv_idx = SNV_idx_dict[(chrom, pos)]
             cn = SNV_sample_dict[sample][(chrom, pos)]
             if snv_idx in sampled_snv_idx_list_sorted:
-                new_idx = np.where(sampled_snv_idx_list_sorted == snv_idx)[0]
+                new_idx = np.where(sampled_snv_idx_list_sorted == snv_idx)[0][0]
                 F_SNV[sample_idx][new_idx] = cn
                 if chrom in seg_dic.keys():
                     cn_idx = _get_seg_idx(seg_dic[chrom], pos)
                     if cn_idx != None:
-                        Q_SNV[l + snv_idx][cn_idx] = 1
+                        Q_SNV[new_idx][cn_idx] = 1
                     else:
                         print("snv at chr " + str(chrom) + " pos " + str(
                             pos) + " is not found in copy number info.")
@@ -290,18 +292,19 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
                     print("snv id at chr " + str(chrom) + " pos " + str(
                         pos) + " is not found in copy number info.")
             else:
-                new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0]
+                new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0][0]
                 F_SNV_unsampled[sample_idx][new_idx] = cn
                 if chrom in seg_dic.keys():
                     cn_idx = _get_seg_idx(seg_dic[chrom], pos)
                     if cn_idx != None:
-                        Q_SNV_unsampled[l + snv_idx][cn_idx] = 1
+                        Q_SNV_unsampled[new_idx][cn_idx] = 1
                     else:
                         print("snv at chr " + str(chrom) + " pos " + str(
                             pos) + " is not found in copy number info.")
                 else:
                     print("snv id at chr " + str(chrom) + " pos " + str(
                         pos) + " is not found in copy number info.")
+        print(l, g, r, const*(2*n-1))
         for chrom in CN_sample_rec_dict[sample]:
             for (s,e) in CN_sample_rec_dict[sample][chrom]:
                 cn_idx_list = get_CN_indices(CN_startPos_dict, CN_endPos_dict, chrom, s, e)
@@ -309,13 +312,13 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
                 cn_minor = CN_sample_rec_dict_minor[sample][chrom][(s, e)]
                 cn_major = CN_sample_rec_dict_major[sample][chrom][(s, e)]
                 for cn_idx in cn_idx_list:
-                    F_CNV[sample_idx][cn_idx + l + g] = cn_minor
-                    F_CNV[sample_idx][cn_idx + l + g + r] = cn_major
+                    F_CNV[sample_idx][cn_idx] = cn_minor
+                    F_CNV[sample_idx][cn_idx+r] = cn_major
 
     # create dictionary with key as segment index and val as tuple containing (chrm, bgn, end)
     cv_attr = { i: (chrm, bgn, end) for chrm, lst in seg_dic.iteritems() for (i, bgn, end) in lst }
 
-    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_idx_list_sorted, unsampled_snv_idx_list_sorted
     ### A and H are empty lists
 
 #  input: segs (list of tuple) tuple is ( seg_idx, bgn_pos, end_pos ) for segments of a single chromosome
@@ -469,7 +472,7 @@ def get_sample_dict(reader):
                 CN_sample_rec_dict[rec.CHROM] = dict() ### xf
                 CN_sample_rec_dict_minor[rec.CHROM] = dict() ### xf
                 CN_sample_rec_dict_major[rec.CHROM] = dict() ### xf
-            print(rec.CHROM, rec.INFO['END'],rec.samples[0].data.CN)
+            #print(rec.CHROM, rec.INFO['END'],rec.samples[0].data.CN)
             if isinstance(rec.INFO['END'], list):
                 info_end = rec.INFO['END'][0]
             else:
