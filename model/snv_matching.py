@@ -1,6 +1,5 @@
 import numpy as np
 import re
-import matplotlib.pyplot as plt
 
 
 def dot2pctable(dotfile):
@@ -48,37 +47,38 @@ def snv_assign(C_CNV, Q, A, E, U, F):
     min_dist = np.full((g_un), np.inf)
     min_node = np.full((g_un), -1)
     for b in clone_idx_range:
-        print(b)
+        #print(b)
         ### normal copy number=1
         C_SNV_clone_1 = C_hat_1[b, :] # g_un
         C_SNV_clone_2 = C_hat_2[b, :]
         C_SNV_clone_parent_1 = C_hat_1_parent[b, :]
         C_SNV_clone_parent_2 = C_hat_2_parent[b, :]
         valid_snv_idx = np.array(list(set(np.append(np.where(C_SNV_clone_1 == 1)[0],np.where(C_SNV_clone_1 - C_SNV_clone_parent_1 > 1)[0]))))
-        F_est = U[:,b] * C_SNV_clone_1[valid_snv_idx] + np.dot(U, A[b, :][:,np.newaxis]* C_hat_1[:,valid_snv_idx])
+        #print(U[:,b][:,np.newaxis] ,C_SNV_clone_1[valid_snv_idx],U[:,b][:,np.newaxis] * C_SNV_clone_1[valid_snv_idx])
+        F_est = U[:,b][:,np.newaxis] * C_SNV_clone_1[valid_snv_idx] + np.dot(U, A[b, :][:,np.newaxis]* C_hat_1[:,valid_snv_idx])
         #print('1',F_est, F[:, valid_snv_idx])
         dist = np.sum(np.abs(F_est - F[:, valid_snv_idx]),axis=0)
         dist_stack = np.column_stack((min_dist[valid_snv_idx], dist))
         argmin = np.argmin(dist_stack, axis=-1)
         if (argmin == 1).any():
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_node[valid_snv_idx[argmin == 1]] = b
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_dist[valid_snv_idx] = np.min(dist_stack, axis=-1)
-            print(min_node, min_dist)
+            #print(min_node, min_dist)
 
         valid_snv_idx = np.array(list(set(np.append(np.where(C_SNV_clone_2 == 1)[0],np.where(C_SNV_clone_2 - C_SNV_clone_parent_2 > 1)[0]))))
-        F_est = U[:, b] * C_SNV_clone_2[valid_snv_idx] + np.dot(U, A[b, :][:, np.newaxis] * C_hat_2[:, valid_snv_idx])
+        F_est = U[:, b][:,np.newaxis] * C_SNV_clone_2[valid_snv_idx] + np.dot(U, A[b, :][:, np.newaxis] * C_hat_2[:, valid_snv_idx])
         #print('2',F_est, F[:, valid_snv_idx])
         dist = np.sum(np.abs(F_est - F[:, valid_snv_idx]),axis=0)
         dist_stack = np.column_stack((min_dist[valid_snv_idx], dist))
         argmin = np.argmin(dist_stack, axis=-1)
         if (argmin == 1).any():
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_node[valid_snv_idx[argmin == 1]] = b
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_dist[valid_snv_idx] = np.min(dist_stack, axis=-1)
-            print(min_node, min_dist)
+            #print(min_node, min_dist)
 
         ### copy number > 1
         valid_snv_idx = np.where(C_SNV_clone_1 > 1)[0]
@@ -88,11 +88,11 @@ def snv_assign(C_CNV, Q, A, E, U, F):
         dist_stack = np.column_stack((min_dist[valid_snv_idx], dist))
         argmin = np.argmin(dist_stack, axis=-1)
         if (argmin == 1).any():
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_node[valid_snv_idx[argmin == 1]] = b
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_dist[valid_snv_idx] = np.min(dist_stack, axis=-1)
-            print(min_node, min_dist)
+            #print(min_node, min_dist)
 
         valid_snv_idx = np.where(C_SNV_clone_2 > 1)[0]
         F_est = U[:, b][:,np.newaxis] + np.dot(U, A[b, :][:, np.newaxis] * C_hat_2[:, valid_snv_idx] / C_SNV_clone_2[valid_snv_idx])
@@ -101,13 +101,15 @@ def snv_assign(C_CNV, Q, A, E, U, F):
         dist_stack = np.column_stack((min_dist[valid_snv_idx], dist))
         argmin = np.argmin(dist_stack, axis=-1)
         if (argmin == 1).any():
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_node[valid_snv_idx[argmin == 1]] = b
-            print(min_node[valid_snv_idx[argmin == 1]])
+            #print(min_node[valid_snv_idx[argmin == 1]])
             min_dist[valid_snv_idx] = np.min(dist_stack, axis=-1)
-            print(min_node, min_dist)
-
-    return min_node, min_dist
+            #print(min_node, min_dist)
+    W_snv = np.zeros((n, len(min_node)))
+    for i in range(len(min_node)):
+        W_snv[min_node[i], i] = 1
+    return min_node, min_dist, W_snv
 
 
 
@@ -118,7 +120,7 @@ if __name__ == '__main__':
     g_un=5
     k=4
     np.random.seed(0)
-    U = np.array([[0.1, 0.5, 0.3, 0.1]])
+    U = np.array([[0.1, 0.5, 0.3, 0.1],[0.2, 0.2, 0.6, 0]])
     C_CNV = np.array([[1,2,1,1,1,1,4,1],
                       [1,2,1,3,2,2,1,1],
                       [1,2,1,1,1,1,1,1],
@@ -137,4 +139,4 @@ if __name__ == '__main__':
                   [1, 1, 0, 0],
                   [0, 0, 1, 0]])
     F = np.dot(U, C_SNV)
-    min_node, min_dist = snv_assign(C_CNV, Q, A, E, U, F)
+    min_node, min_dist, W_snv = snv_assign(C_CNV, Q, A, E, U, F)
