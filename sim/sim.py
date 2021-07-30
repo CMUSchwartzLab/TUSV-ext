@@ -69,7 +69,8 @@ def main(argv):
 	output_folder = args['output_folder']
 
 	constants_dict = dict()
-	constants_dict['mut_types'] = ['amp','rem','inv', 'trans']
+	constants_dict['mut_types'] = ['inv', 'rem', 'trans', 'amp']
+	#constants_dict['mut_types'] = [ 'amp']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
 	if num_mutes_snv is not None:
@@ -86,8 +87,8 @@ def main(argv):
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	# chrom_dict[('1', 0)] = chpr.ChrmProf(10000, '1', 0)
-	# chrom_dict[('1', 1)] = chpr.ChrmProf(10000, '1', 1)
+	# chrom_dict[('1', 0)] = chpr.ChrmProf(1000, '1', 0)
+	# chrom_dict[('1', 1)] = chpr.ChrmProf(1000, '1', 1)
 	# chrom_dict[('2', 0)] = chpr.ChrmProf(10000, '2', 0)
 	# chrom_dict[('2', 1)] = chpr.ChrmProf(10000, '2', 1)
 	# chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
@@ -161,18 +162,19 @@ def main(argv):
 		l = random_get_tree(n) # list
 		print(l)
 		edge_list = get_edges(l)  ###xf: generate edges list with format of [(0,1,'r'/'l'),...]
+		print(edge_list)
 		
 		gp = gnpr.GeneProf(chrom_dict, constants_dict)
 
 		t = Tree(edge_list, gp)
-		print(t.node_list)
+		print(t.node_list, t.idx_node_dict)
 
 		geneprof_list = list()
 
 		t.add_mutations_along_edges(t.rootNode, geneprof_list)
 
 		generate_t(t, 'T.dot', outputFolder)
-
+		#U = np.array([[1/(2*n-1)]*(2*n-1)])
 		U = random_get_usages(m, 2 * n - 1)
 
 		l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(t, n, constants_dict)
@@ -185,37 +187,72 @@ def main(argv):
 			C = generate_c(t, n, constants_dict, bool_list)
 			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
 			###xf: need to be further editted
+			W, W_SV, _ = generate_w(C, t.idx_node_dict, l, 0)
 			F = generate_f(U, C, l, 0, r, seg_cn_idx_dict, sv_cn_idx_dict, None, constants_dict['deterministic'], None,None,None, None)
 			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 			generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C,
 					   c_p, c_m, a, h, mate_dict, outputFolder)
 			output_tsv(U, '/U.tsv', outputFolder)
 			output_tsv(C, '/C.tsv', outputFolder)
+			output_tsv(W, '/W.tsv', outputFolder)
+			output_tsv(W_SV, '/W_SV.tsv', outputFolder)
 			output_tsv(F, '/F.tsv', outputFolder)
 
 		else:
 			N = np.random.poisson(constants_dict['read_depth'], (m, r))
 			g, snv_cn_idx_dict = get_snv_copy_num_idx_dict(t)
-			C_list, C_unsampled_snv_list, snv_sampled_idx_list, snv_unsampled_idx_list, d_list, d_unsampled_list = generate_c_snv(t, n, constants_dict, bool_list)
+			print(snv_cn_idx_dict)
+			C_list, C_unsampled_snv_list, snv_sampled_idx_list, snv_unsampled_idx_list, d_list, d_unsampled_list = \
+				generate_c_snv(t, n, constants_dict, bool_list, [1])
 			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
 			F_list = []
 			F_unsampled_snv_list = []
 			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 			output_tsv(U, '/U.tsv', outputFolder)
-			for i in range(len(C_list)):
-				F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i], bool_list)
-				F_list.append(F)
-				#print(F[:, (l+len(snv_sampled_idx_list[i])):])
-				F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i], C_list[i][:, (l+len(snv_sampled_idx_list[i])):], r, seg_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], snv_unsampled_idx_list[i], d_unsampled_list[i], bool_list, N, F[:, (l+len(snv_sampled_idx_list[i])):])
-				F_unsampled_snv_list.append(F_unsampled_snv)
-				generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx_list[i],
-					   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
-					   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, i)
+			if len(C_list) > 1:
+				for i in range(len(C_list)):
+					F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i], bool_list)
+					F_list.append(F)
+					#print(F[:, (l+len(snv_sampled_idx_list[i])):])
+					F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i], C_list[i][:, (l+len(snv_sampled_idx_list[i])):], r, seg_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], snv_unsampled_idx_list[i], d_unsampled_list[i], bool_list, N, F[:, (l+len(snv_sampled_idx_list[i])):])
+					F_unsampled_snv_list.append(F_unsampled_snv)
+					generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx_list[i],
+						   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
+						   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, i)
 
-				output_tsv(C_list[i], '/C_' + str(i) + '.tsv', outputFolder)
-				output_tsv(F, '/F_' + str(i) + '.tsv', outputFolder)
-				output_tsv(F_unsampled_snv, '/F_unsampled_snv_' + str(i) + '.tsv', outputFolder)
-				output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv_' + str(i) + '.tsv', outputFolder)
+					output_tsv(C_list[i], '/C_' + str(i) + '.tsv', outputFolder)
+					output_tsv(F, '/F_' + str(i) + '.tsv', outputFolder)
+					output_tsv(F_unsampled_snv, '/F_unsampled_snv_' + str(i) + '.tsv', outputFolder)
+					output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv_' + str(i) + '.tsv', outputFolder)
+			else:
+				i=0
+				C = C_list[i]
+				print(t.idx_node_dict)
+				W, W_SV, W_SNV = generate_w(C, t.idx_node_dict, l, g)
+				F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
+							   snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i],
+							   bool_list)
+				F_list.append(F)
+				# print(F[:, (l+len(snv_sampled_idx_list[i])):])
+				F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i],
+													   C_list[i][:, (l + len(snv_sampled_idx_list[i])):], r,
+													   seg_cn_idx_dict, snv_cn_idx_dict,
+													   constants_dict['deterministic'], snv_unsampled_idx_list[i],
+													   d_unsampled_list[i], bool_list, N,
+													   F[:, (l + len(snv_sampled_idx_list[i])):])
+				F_unsampled_snv_list.append(F_unsampled_snv)
+				generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict,
+							   snv_sampled_idx_list[i],
+							   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
+							   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, "")
+
+				output_tsv(C, '/C.tsv', outputFolder)
+				output_tsv(W, '/W.tsv', outputFolder)
+				output_tsv(W_SV, '/W_SV.tsv', outputFolder)
+				output_tsv(W_SNV, '/W_SNV.tsv', outputFolder)
+				output_tsv(F, '/F.tsv', outputFolder)
+				# output_tsv(F_unsampled_snv, '/F_unsampled_snv.tsv', outputFolder)
+				# output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv.tsv', outputFolder)
 
 		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
 		pickle.dump(edge_list, edge_list_pickle)
@@ -369,7 +406,7 @@ def get_snv_copy_num_idx_dict(tree):
 	sorted_d = sorted(list(d),key=lambda x: (int(x[0]), x[1]))
 	for k in range(len(sorted_d)):
 		d2[sorted_d[k]] = k
-
+	print(d2)
 	return len(list(d)), d2
 
 
@@ -463,6 +500,22 @@ def make_2d_list(rows, cols):
 		result.append([0] * cols)
 	return result
 
+def generate_w(C, idx_node_dict, l, g):
+	C_sv_snv = C[:, : l+g]
+	W = np.zeros(C_sv_snv.shape)
+	for node_idx in idx_node_dict.keys():
+		if node_idx != C.shape[0]:
+			parent_idx = idx_node_dict[node_idx].parent.index
+			indices_a = np.where(C_sv_snv[node_idx-1] - C_sv_snv[parent_idx-1] > 0)[0]
+			indices_b = np.where(C_sv_snv[parent_idx-1] == 0)[0]
+			indices = np.intersect1d(indices_a, indices_b)
+			W[node_idx-1, indices] = 1
+	W_sv = W[:, :l]
+	if g != 0:
+		W_snv = W[:, l:(l+g)]
+	else:
+		W_snv = None
+	return W, W_sv, W_snv
 
 def generate_c_snv(tree, n, constants_dict, bool_list, subsample_list=[0, 0.0005, 0.001, 0.002]):
 
@@ -505,6 +558,7 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample_list=[0, 0.0005
 					d_sampled[col] = d
 
 			temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
+			print(idx, 'temp_snv_dict',temp_snv_dict)
 			for (chrm, pos) in temp_snv_dict.keys():
 				if snv_cn_idx_dict[(chrm, pos)] in snv_sampled_idx:
 					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
@@ -633,12 +687,11 @@ def generate_seg_cp_paternal(tree, n, bool_list):
 						c_p[row][col] = cp
 	return c_p, c_m
 
-
-
 # given u (m * (2n-1) matrix) and c ((2n-1)*(l+r) matrix), output f (m * (l+r) matrix)
 ### xf: deterministic f vs. generative f
 def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, det, N, snv_idx_list, d, bool_list):
 	#print(u.shape, c.shape)
+	print(seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, det, N, snv_idx_list, d, bool_list)
 	print(l, g, r, c.shape)
 	print(d)
 	print(c)
@@ -664,15 +717,19 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 		for (sv_chr, sv_pos, sv_idx) in sv_tuple_list:
 			cnv_idx = search_sv_cnv_num(sv_chr, sv_pos, seg_cn_idx_dict)
 			adj_cnv_idx = cnv_idx + int(int(d[sv_idx]) == int(bool_list[cnv_idx]))*r
-			#print("p", F_true[:, sv_idx],F_true[:, l+g+adj_cnv_idx])
-			F_gen[:, sv_idx] = np.random.binomial((F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))/N[:, cnv_idx]
+			adj_cnv_idx_a = cnv_idx + int(int(d[sv_idx]) != int(bool_list[cnv_idx])) * r
+			print("p", F_true[:, sv_idx],F_true[:, l+g+adj_cnv_idx])
+			F_gen[:, sv_idx] = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))/N[:, cnv_idx]
 		for i in range(0, len(snv_tuple_list)):
 			(snv_chr, snv_pos), snv_idx = snv_tuple_list[i]
 			if snv_idx in snv_idx_list:
 				snv_new_idx = np.where(snv_idx_list == snv_idx)[0][0]
+				print(snv_new_idx, snv_pos,)
 				cnv_idx = search_sv_cnv_num(snv_chr, snv_pos, seg_cn_idx_dict)
-				adj_cnv_idx = cnv_idx + int(int(d[l+snv_idx]) == int(bool_list[cnv_idx])) * r
-				F_gen[:, l+snv_new_idx] = np.random.binomial((F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])/N[:, cnv_idx]
+				adj_cnv_idx = cnv_idx + int(int(d[l+snv_new_idx]) == int(bool_list[cnv_idx])) * r
+				adj_cnv_idx_a = cnv_idx + int(int(d[l+snv_new_idx]) != int(bool_list[cnv_idx])) * r
+				print("p", F_true[:, l + snv_new_idx], F_true[:, l + g + adj_cnv_idx], F_true[:, l + g + adj_cnv_idx_a] )
+				F_gen[:, l+snv_new_idx] = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])/N[:, cnv_idx]
 		print(np.sqrt(np.mean(np.square(F_gen - F_true))))
 		return F_gen
 
@@ -921,9 +978,6 @@ def generate_cnv(chrm, pos, rec_id, alt_type, info_end, gt, cn):
 	return newRec
 
 
-
-
-
 def is_cnv_record(rec):
 	return rec.ID[0:3] == 'cnv'
 
@@ -1044,6 +1098,7 @@ class Tree:
 				c = c.r
 
 		if node.left != None:
+			print('node:',node.left)
 			curr_gp_copied_left = curr_gp.deepcopy()
 			# reset copied_node.geneProf.mutCount and copied_node.geneProf.maxCount
 			curr_gp_copied_left.mutCount, curr_gp_copied_left.maxCount = 0, curr_gp_copied_left.get_mut_count() ### xf: get_mut_count: random.poisson(exp_mut_rate)
@@ -1055,6 +1110,7 @@ class Tree:
 			self.add_mutations_along_edges(node.left, geneprof_list)
 
 		if node.right != None:
+			print('node:',node.right)
 			curr_gp_copied_right = curr_gp.deepcopy()
 
 			# reset copied_node.geneProf.mutCount and copied_node.geneProf.maxCount
@@ -1120,7 +1176,8 @@ def get_args(argv):
 	parser.add_argument('-s', '--expect_mut_len', type = int, dest = "size_mutes", required = True)
 	parser.add_argument('-o', '--output_folder', type = str, dest = "output_folder", required = True)
 	parser.add_argument('-p', '--num_patients', type=int, dest="num_patients", default=5)
-	parser.add_argument('-d', '--deterministic_model', type=bool, dest='deterministic', default=True)
+	parser.add_argument('-det', '--deterministic_model', dest='deterministic', action='store_true')
+	parser.add_argument('-sto', '--stochastic_model', dest='deterministic', action='store_false')
 	parser.add_argument('-rd', '--read_depth', type=int, dest='read_depth', default=50)
 	return vars(parser.parse_args(argv))
 
