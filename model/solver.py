@@ -64,7 +64,7 @@ def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit
         else:
             U = get_U(F_phasing, C, n, R, W, l)
 
-        obj_val, C, E, R, W, W_sv, W_snv, err_msg = get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
+        obj_val, C, E, A, R, W, W_sv, W_snv, err_msg = get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
 
         # handle errors
         if err_msg != None:
@@ -76,7 +76,7 @@ def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit
 
         prevC = C
 
-    return U, C, E, R, W, W_sv, W_snv, obj_val, None
+    return U, C, E, A, R, W, W_sv, W_snv, obj_val, None
 
 
 #  input: F (np.array of float) [m, l+g+2r] mixed copy number f_p,s of mutation s in sample p
@@ -184,7 +184,7 @@ def get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
             W_node_snv[j, b] = sum([int(W[i, j, l+b].X) for i in xrange(0, N)])
         for b in xrange(0, l+g):
             W_node[j, b] = sum([int(W[i, j, b].X) for i in xrange(0, N)])
-    return mod.objVal, C, E, R, W_node, W_node_sv, W_node_snv, None
+    return mod.objVal, C, E, A, R, W_node, W_node_sv, W_node_snv, None
 
 
 
@@ -230,7 +230,11 @@ def _set_ancestry_constraints(mod, A, E, N):
                 if g != i:
                     mod.addConstr(A[g, j] >= E[i, j] + A[g, i] - 1)  # v_j gets v_i's ancestor profile except a_{i,j}
                     mod.addConstr(A[g, j] <= 1 - E[i, j] + A[g, i])
-
+    for i in xrange(0, N):
+        for j in xrange(0, N):
+            mod.addConstr(A[i, j] + A[j, i] <= 1)
+    for i in xrange(0, N):
+        mod.addConstr(A[i, i] == 0)
 
 def _set_cost_constraints(mod, R, C, E, n, l, g, r, c_max):
     N = 2 * n - 1
