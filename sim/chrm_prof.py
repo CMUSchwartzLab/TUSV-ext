@@ -112,7 +112,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 		SNV_OrgNode.SNV_Mut_children.append(SNV_MutNode)
 		SNV_MutNode.SNV_Org_parent = SNV_OrgNode
-		print(orgNode.chrm, orgNode.pm, org_pos)
+		print('snv:',orgNode.chrm, orgNode.pm, pos, org_pos)
 		return True
 
 	def deepcopy_(self, other_muts):
@@ -277,7 +277,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 	# duplicate region from bgn to end. returns boolean for complete or not
 	def amp(self, bgn, end, amp_num, snv):  	### xf: it uses a linked list data structure, self.mut is always the first MutNode
-		print("amp",self.chrm, self.pm, bgn, end)
+		print("amp",self.chrm, self.pm, bgn, end, amp_num)
 		if not self._is_in_bounds(bgn, end) or not self._is_splitable(bgn, end):
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
@@ -302,7 +302,9 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				if snv:
 					for snv_child in head.SNV_Mut_children:
 						snv_child.pos += seg_len
+						print('child:',snv_child.pos)
 				head = head.r
+
 
 			self.n = self.n + (end - bgn + 1)
 		return True
@@ -363,7 +365,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				for mutchild in temp_children_list:
 					if mutchild.pos <= splitMut.bgn + k - 1:
 						mutchild.Mut_parent = mutNode2
-						mutNode2.SNV_mut_children.append(mutchild)
+						mutNode2.SNV_Mut_children.append(mutchild)
 						mutNode1.SNV_Mut_children.remove(mutchild)
 			else:
 				for mutchild in temp_children_list:
@@ -484,7 +486,7 @@ class _SNV_MutNode:
 		self.pm = pm
 
 	def copy(self):
-		return _SNV_MutNode(self.pos, self.chrm, self.pos)
+		return _SNV_MutNode(self.pos, self.chrm, self.pm)
 
 class _SNV_OrgNode:
 	def __init__(self, pos, chromosome, pm):
@@ -495,7 +497,7 @@ class _SNV_OrgNode:
 		self.pm = pm
 
 	def copy(self):
-		return _SNV_OrgNode(self.pos, self.chrm, self.pos)
+		return _SNV_OrgNode(self.pos, self.chrm, self.pm)
 
 
 class _OrgNode(_Node): ### xf: OrgNode is a single node which will be splitted during mutation. It will be linked to multiple MutNodes for mapping.
