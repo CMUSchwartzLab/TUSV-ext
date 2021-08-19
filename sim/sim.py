@@ -7,12 +7,14 @@
 #  output: u.tsv, c.tsv, t.dot, sample.vcf
 
 #  co-author: Xuecong Fu
-#  modified: 2021.1-3
+#  modified: 2021.1-8
 
 ##########
 # Import #
 ##########
 from __future__ import division
+
+import copy
 import sys
 import os
 import argparse 
@@ -69,7 +71,7 @@ def main(argv):
 	output_folder = args['output_folder']
 
 	constants_dict = dict()
-	constants_dict['mut_types'] = ['inv', 'rem', 'trans', 'amp']
+	constants_dict['mut_types'] = ['amp','amp', 'inv', 'rem', 'rem', 'trans']
 	#constants_dict['mut_types'] = [ 'amp']
 	constants_dict['exp_mut_size'] = size_mutes # default exp_mut_size is 5745000
 	constants_dict['exp_mut_count'] = num_mutes / ( 2 * n - 2)
@@ -84,11 +86,12 @@ def main(argv):
 	constants_dict['num_samples'] = m
 	constants_dict['deterministic']=args["deterministic"]
 	constants_dict['read_depth'] = args["read_depth"]
+	constants_dict['only_leaf'] = args['only_leaf']
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	# chrom_dict[('1', 0)] = chpr.ChrmProf(1000, '1', 0)
-	# chrom_dict[('1', 1)] = chpr.ChrmProf(1000, '1', 1)
+	# chrom_dict[('1', 0)] = chpr.ChrmProf(10000, '1', 0)
+	# chrom_dict[('1', 1)] = chpr.ChrmProf(10000, '1', 1)
 	# chrom_dict[('2', 0)] = chpr.ChrmProf(10000, '2', 0)
 	# chrom_dict[('2', 1)] = chpr.ChrmProf(10000, '2', 1)
 	# chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
@@ -175,7 +178,14 @@ def main(argv):
 
 		generate_t(t, 'T.dot', outputFolder)
 		#U = np.array([[1/(2*n-1)]*(2*n-1)])
-		U = random_get_usages(m, 2 * n - 1)
+		if not constants_dict['only_leaf']:
+			U = random_get_usages(m, 2 * n - 1)
+		else:
+			U_original = random_get_usages(m, n + 1)
+			U = np.zeros((m, 2 * n -1))
+			U[:, :n] = U_original[:, :n]
+			U[:, -1] = U_original[:, -1]
+			print('U', U)
 
 		l, sv_cn_idx_dict = get_bp_copy_num_idx_dict(t, n, constants_dict)
 		r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict = get_seg_copy_num_idx_dict(t, n)
@@ -228,6 +238,7 @@ def main(argv):
 				i=0
 				C = C_list[i]
 				print(t.idx_node_dict)
+				B, B_SV, B_SNV = generate_b(C, l, g)
 				W, W_SV, W_SNV = generate_w(C, t.idx_node_dict, l, g)
 				F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
 							   snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i],
@@ -250,6 +261,9 @@ def main(argv):
 				output_tsv(W, '/W.tsv', outputFolder)
 				output_tsv(W_SV, '/W_SV.tsv', outputFolder)
 				output_tsv(W_SNV, '/W_SNV.tsv', outputFolder)
+				output_tsv(B, '/B.tsv', outputFolder)
+				output_tsv(B_SV, '/B_SV.tsv', outputFolder)
+				output_tsv(B_SNV, '/B_SNV.tsv', outputFolder)
 				output_tsv(F, '/F.tsv', outputFolder)
 				# output_tsv(F_unsampled_snv, '/F_unsampled_snv.tsv', outputFolder)
 				# output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv.tsv', outputFolder)
@@ -500,6 +514,14 @@ def make_2d_list(rows, cols):
 		result.append([0] * cols)
 	return result
 
+def generate_b(C, l, g):
+	C_sv_snv = C[:, : l + g]
+	B = copy.deepcopy(C_sv_snv)
+	B[B>1] = 1
+	B_sv = B[:, :l]
+	B_snv = B[:, l:(l+g)]
+	return B, B_sv, B_snv
+
 def generate_w(C, idx_node_dict, l, g):
 	C_sv_snv = C[:, : l+g]
 	W = np.zeros(C_sv_snv.shape)
@@ -557,24 +579,11 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample_list=[0, 0.0005
 					c[row][col] = cp
 					d_sampled[col] = d
 
-			temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
-			print(idx, 'temp_snv_dict',temp_snv_dict)
-			for (chrm, pos) in temp_snv_dict.keys():
-				if snv_cn_idx_dict[(chrm, pos)] in snv_sampled_idx:
-					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
-					d = temp_snv_dict[(chrm, pos)]["pm"]
-					col = np.where(snv_sampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0] + l
-					c[row][col] = cp
-					d_sampled[col] = d
-				else:
-					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
-					d = temp_snv_dict[(chrm, pos)]["pm"]
-					col = np.where(snv_unsampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0]
-					c_unsampled_snv[row][col] = cp
-					d_unsampled[col] = d
+
 
 			# add copy number for segments
 			temp_copy_nums_dict = tree.idx_node_dict[idx].geneProf.get_copy_nums_dict()
+			print(idx, "temp_copy_nums_dict", temp_copy_nums_dict)
 			for chrom in temp_copy_nums_dict:
 				(bgns, ends, cps1, cps2) = temp_copy_nums_dict[chrom]
 				for i in range(len(bgns)):
@@ -589,6 +598,25 @@ def generate_c_snv(tree, n, constants_dict, bool_list, subsample_list=[0, 0.0005
 						else:
 							c[row][col] = cp2
 							c[row][col + r] = cp1
+
+			temp_snv_dict = tree.idx_node_dict[idx].geneProf.get_snv_dict()
+			print(idx, 'temp_snv_dict', temp_snv_dict)
+			for (chrm, pos) in temp_snv_dict.keys():
+				if snv_cn_idx_dict[(chrm, pos)] in snv_sampled_idx:
+					cn_idx = search_sv_cnv_num(chrm, pos, seg_cn_idx_dict)
+					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
+
+					d = temp_snv_dict[(chrm, pos)]["pm"]
+					print("snv ", chrm, pos, "cp:", cp, "corres cnv cp:", c[row][l+g+cn_idx])
+					col = np.where(snv_sampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0] + l
+					c[row][col] = cp
+					d_sampled[col] = d
+				else:
+					cp = temp_snv_dict[(chrm, pos)]["copy_num"]
+					d = temp_snv_dict[(chrm, pos)]["pm"]
+					col = np.where(snv_unsampled_idx == snv_cn_idx_dict[(chrm, pos)])[0][0]
+					c_unsampled_snv[row][col] = cp
+					d_unsampled[col] = d
 		c_list.append(np.array(c))
 		c_unsampled_list.append(np.array(c_unsampled_snv))
 		snv_sampled_idx_list.append(snv_sampled_idx)
@@ -701,9 +729,9 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 		F_true = np.dot(u, c)
 		F_gen = np.zeros((F_true.shape))
 		sv_tuple_list = []
+		print("seg_cn_idx_dict", seg_cn_idx_dict)
 		for chrom in sv_cn_idx_dict.keys():
 			for pos_tuple in sv_cn_idx_dict[chrom].keys():
-				print(pos_tuple)
 				sv_tuple_list.append((chrom, pos_tuple[0],sv_cn_idx_dict[chrom][pos_tuple]))
 		sv_tuple_list = sorted(sv_tuple_list, key=lambda a: a[2])
 		snv_tuple_list = list(snv_cn_idx_dict.items())
@@ -726,7 +754,10 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 				snv_new_idx = np.where(snv_idx_list == snv_idx)[0][0]
 				print(snv_new_idx, snv_pos,)
 				cnv_idx = search_sv_cnv_num(snv_chr, snv_pos, seg_cn_idx_dict)
+
+
 				adj_cnv_idx = cnv_idx + int(int(d[l+snv_new_idx]) == int(bool_list[cnv_idx])) * r
+				print(c[:, l + g + adj_cnv_idx])
 				adj_cnv_idx_a = cnv_idx + int(int(d[l+snv_new_idx]) != int(bool_list[cnv_idx])) * r
 				print("p", F_true[:, l + snv_new_idx], F_true[:, l + g + adj_cnv_idx], F_true[:, l + g + adj_cnv_idx_a] )
 				F_gen[:, l+snv_new_idx] = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])/N[:, cnv_idx]
@@ -1089,7 +1120,7 @@ class Tree:
 			return
 		curr_gp = node.geneProf
 		geneprof_list.append(curr_gp) ### xf: make sure each calling of add_mutations_along_edges will be saved, node is resursive
-		print 'node:', node.index, 'geneprof_list:'
+		#print 'node:', node.index, 'geneprof_list:'
 		for k in curr_gp.chrom_dict.keys():
 			print(k)
 			c = curr_gp.chrom_dict[k].mut
@@ -1098,7 +1129,7 @@ class Tree:
 				c = c.r
 
 		if node.left != None:
-			print('node:',node.left)
+			print('node:',node.left.index)
 			curr_gp_copied_left = curr_gp.deepcopy()
 			# reset copied_node.geneProf.mutCount and copied_node.geneProf.maxCount
 			curr_gp_copied_left.mutCount, curr_gp_copied_left.maxCount = 0, curr_gp_copied_left.get_mut_count() ### xf: get_mut_count: random.poisson(exp_mut_rate)
@@ -1110,7 +1141,7 @@ class Tree:
 			self.add_mutations_along_edges(node.left, geneprof_list)
 
 		if node.right != None:
-			print('node:',node.right)
+			print('node:',node.right.index)
 			curr_gp_copied_right = curr_gp.deepcopy()
 
 			# reset copied_node.geneProf.mutCount and copied_node.geneProf.maxCount
@@ -1178,6 +1209,7 @@ def get_args(argv):
 	parser.add_argument('-p', '--num_patients', type=int, dest="num_patients", default=5)
 	parser.add_argument('-det', '--deterministic_model', dest='deterministic', action='store_true')
 	parser.add_argument('-sto', '--stochastic_model', dest='deterministic', action='store_false')
+	parser.add_argument('-leaf', '--only_leaf', dest='only_leaf', action='store_true')
 	parser.add_argument('-rd', '--read_depth', type=int, dest='read_depth', default=50)
 	return vars(parser.parse_args(argv))
 
