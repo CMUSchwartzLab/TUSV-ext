@@ -839,9 +839,10 @@ def _deepcopy_org(headA, other_muts):
 				if snv_cA_org not in snv_org_copy_dict.keys():
 					snv_cB_org = snv_cA_org.copy()
 					snv_org_copy_dict[snv_cA_org] = snv_cB_org
+					curB.SNV_Org_children.append(snv_cB_org)
 				else:
 					snv_cB_org = snv_org_copy_dict[snv_cA_org]
-				curB.SNV_Org_children.append(snv_cB_org)
+
 				snv_cB_org.Org_parent = curB
 				snv_cB_mut.SNV_Org_parent = snv_cB_org
 				snv_cB_org.SNV_Mut_children.append(snv_cB_mut)

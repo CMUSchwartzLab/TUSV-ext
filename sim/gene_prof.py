@@ -102,7 +102,7 @@ class GeneProf:
 
 	def random_mutation_snv(self):
 		mut_num = np.random.poisson(self.constants_dict["snv_mut_lambda"])
-		mut_chr_idx = np.random.choice(len(self.chrom_dict.keys()), size=mut_num)
+		mut_chr_idx = np.random.choice(len(self.chrom_dict.keys()), size=mut_num,)
 		mut_chr = []
 		mut_pos = []
 		for i in range(mut_num):
