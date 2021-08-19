@@ -39,7 +39,7 @@ def snv_assign(C_CNV, Q, A, E, U, F):
     n, r = C_CNV.shape
     g_un = Q.shape[0]
     r = int(r/2)
-    clone_idx_range = range(0, n)
+    clone_idx_range = range(0, n-1) # exclude the root node
     C_hat_1 = np.dot(C_CNV[:, :r], np.transpose(Q)) # n*g_un, the copy number of CNV at SNV position
     C_hat_2 = np.dot(C_CNV[:, r:], np.transpose(Q))  # n*g_un, the copy number of CNV at SNV position
     C_hat_1_parent = np.dot(E.T, C_hat_1)
