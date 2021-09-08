@@ -5,7 +5,14 @@
       <paths name="AWS EC2">
         <serverdata>
           <mappings>
-            <mapping deploy="/tusv_s3/tusv" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="shared/tusv_s3/tusv" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="lanec1">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/xuecongf/pytorch_fnet_old_model" local="$USER_HOME$/PycharmProjects/pytorch_fnet_old_model" web="/" />
           </mappings>
         </serverdata>
       </paths>
