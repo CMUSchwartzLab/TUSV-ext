@@ -50,7 +50,7 @@ MAX_SOLVER_ITERS = 5000
 #  notes: l (int) is number of structural variants. r (int) is number of copy number regions, 2r means we phase it for allelic copy numbers,
 #         g (int) is number of single nucleotide variants.
 
-def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None):
+def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None, only_leaf=False):
     np.random.seed()  # sets seed for running on multiple processors
     m = len(F_phasing)
     l_g_sample, r = Q.shape
@@ -62,7 +62,7 @@ def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit
         if i == 0:
             U = gen_U(m, n)
         else:
-            U = get_U(F_phasing, C, n, R, W, l)
+            U = get_U(F_phasing, C, n, R, W, l, only_leaf)
 
         obj_val, C, E, A, R, W, W_sv, W_snv, err_msg = get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit)
 
@@ -83,13 +83,15 @@ def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit
 #         C (np.array of int) [2n-1, l+g+2r] int copy number c_k,s of mutation s in clone k
 #         n (int) number of leaves in phylogeny. 2n-1 is total number of nodes
 # output: U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
-def get_U(F_phasing, C, n, R, W_node, l):
+def get_U(F_phasing, C, n, R, W_node, l, only_leaf):
     m, L = F_phasing.shape  ### xf: L=l(+g)+2r depending on if SNVs are included
     N = 2 * n - 1
     mod = gp.Model('tusv')
     U = _get_gp_arr_cnt_var(mod, m, N, 1.0)
     for i in xrange(0, m):
-        mod.addConstr(gp.quicksum(U[i, :]) == 1.0)
+        mod.addConstr(gp.quicksum(U[i, :]) == 1.0, "Frequencies sum equals to 1")
+        if only_leaf:
+            mod.addConstr(gp.quicksum(U[i, n: -1]) == 0.0, "Internal nodes have zero frequencies")
     sums = []
     for p in xrange(0, m):
         for s in xrange(0, L):
