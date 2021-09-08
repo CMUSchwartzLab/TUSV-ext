@@ -25,6 +25,7 @@ import operator
 import datetime
 import shutil
 import pickle
+import pandas as pd
 
 import numpy as np
 import graphviz as gv
@@ -198,7 +199,7 @@ def main(argv):
 			c_p, c_m = generate_seg_cp_paternal(t, n, bool_list)
 			###xf: need to be further editted
 			W, W_SV, _ = generate_w(C, t.idx_node_dict, l, 0)
-			F = generate_f(U, C, l, 0, r, seg_cn_idx_dict, sv_cn_idx_dict, None, constants_dict['deterministic'], None,None,None, None)
+			F, df_list = generate_f(U, C, l, 0, r, seg_cn_idx_dict, sv_cn_idx_dict, None, constants_dict['deterministic'], None,None,None, None)
 			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 			generate_s(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, seg_bgn_idx_dict, seg_end_idx_dict, F, U, C,
 					   c_p, c_m, a, h, mate_dict, outputFolder)
@@ -221,7 +222,7 @@ def main(argv):
 			output_tsv(U, '/U.tsv', outputFolder)
 			if len(C_list) > 1:
 				for i in range(len(C_list)):
-					F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i], bool_list)
+					F, df_list = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i], bool_list)
 					F_list.append(F)
 					#print(F[:, (l+len(snv_sampled_idx_list[i])):])
 					F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i], C_list[i][:, (l+len(snv_sampled_idx_list[i])):], r, seg_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], snv_unsampled_idx_list[i], d_unsampled_list[i], bool_list, N, F[:, (l+len(snv_sampled_idx_list[i])):])
@@ -240,7 +241,7 @@ def main(argv):
 				print(t.idx_node_dict)
 				B, B_SV, B_SNV = generate_b(C, l, g)
 				W, W_SV, W_SNV = generate_w(C, t.idx_node_dict, l, g)
-				F = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
+				F, df_list = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
 							   snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i],
 							   bool_list)
 				F_list.append(F)
@@ -256,7 +257,15 @@ def main(argv):
 							   snv_sampled_idx_list[i],
 							   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
 							   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, "")
-
+				if not os.path.exists(outputFolder + '/fastclone_input'):
+					os.mkdir(outputFolder + '/fastclone_input')
+				if not os.path.exists(outputFolder + '/pyclone_input'):
+					os.mkdir(outputFolder + '/pyclone_input')
+				for i in range(len(df_list)):
+					df_list[i].to_csv(outputFolder + '/fastclone_input/sample' + str(i) + '.tsv', sep='\t')
+					df_list[i]["minor_cn"] = np.round(df["minor_cn"]).astype(int)
+					df_list[i]["major_cn"] = np.round(df["major_cn"]).astype(int)
+					df_list[i].to_csv(outputFolder + '/pyclone_input/sample' + str(i) + '.tsv', sep='\t')
 				output_tsv(C, '/C.tsv', outputFolder)
 				output_tsv(W, '/W.tsv', outputFolder)
 				output_tsv(W_SV, '/W_SV.tsv', outputFolder)
@@ -726,6 +735,10 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 	if det:
 		return np.dot(u, c)
 	else:
+		df_list = []
+		for i in range(u.shape[0]):
+			df_pyclone = pd.DataFrame(columns=['mutation_id','ref_counts','var_counts','normal_cn','minor_cn','major_cn'])
+			df_pyclone_list.append(df_pyclone)
 		F_true = np.dot(u, c)
 		F_gen = np.zeros((F_true.shape))
 		sv_tuple_list = []
@@ -746,23 +759,35 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 			cnv_idx = search_sv_cnv_num(sv_chr, sv_pos, seg_cn_idx_dict)
 			adj_cnv_idx = cnv_idx + int(int(d[sv_idx]) == int(bool_list[cnv_idx]))*r
 			adj_cnv_idx_a = cnv_idx + int(int(d[sv_idx]) != int(bool_list[cnv_idx])) * r
-			print("p", F_true[:, sv_idx],F_true[:, l+g+adj_cnv_idx])
-			F_gen[:, sv_idx] = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))/N[:, cnv_idx]
+			#print("p", F_true[:, sv_idx],F_true[:, l+g+adj_cnv_idx])
+			N_sv = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))
+			ref_counts = np.round((F_true[:, l+g+adj_cnv_idx] + F_true[:, l+g+adj_cnv_idx_a])*N[:,cnv_idx] - N_sv).astype(int)
+			for index in range(len(df_list)):
+				df_pyclone_list[index] = df_list[index].append({'mutation_id': 'sv' + str(sv_idx), 'ref_counts': ref_counts[index], 'var_counts': N_sv[index], \
+							   'normal_cn': 2, 'minor_cn': min(F_gen[index,l+g+adj_cnv_idx], F_gen[index,l+g+adj_cnv_idx_a]), \
+							'major_cn': max(F_gen[index,l+g+adj_cnv_idx], F_gen[index,l+g+adj_cnv_idx_a])}, ignore_index=True)
+			F_gen[:, sv_idx] = N_sv/N[:, cnv_idx]
 		for i in range(0, len(snv_tuple_list)):
 			(snv_chr, snv_pos), snv_idx = snv_tuple_list[i]
 			if snv_idx in snv_idx_list:
 				snv_new_idx = np.where(snv_idx_list == snv_idx)[0][0]
-				print(snv_new_idx, snv_pos,)
+				#print(snv_new_idx, snv_pos,)
 				cnv_idx = search_sv_cnv_num(snv_chr, snv_pos, seg_cn_idx_dict)
-
-
 				adj_cnv_idx = cnv_idx + int(int(d[l+snv_new_idx]) == int(bool_list[cnv_idx])) * r
-				print(c[:, l + g + adj_cnv_idx])
+				#print(c[:, l + g + adj_cnv_idx])
 				adj_cnv_idx_a = cnv_idx + int(int(d[l+snv_new_idx]) != int(bool_list[cnv_idx])) * r
-				print("p", F_true[:, l + snv_new_idx], F_true[:, l + g + adj_cnv_idx], F_true[:, l + g + adj_cnv_idx_a] )
-				F_gen[:, l+snv_new_idx] = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])/N[:, cnv_idx]
-		print(np.sqrt(np.mean(np.square(F_gen - F_true))))
-		return F_gen
+				#print("p", F_true[:, l + snv_new_idx], F_true[:, l + g + adj_cnv_idx], F_true[:, l + g + adj_cnv_idx_a] )
+				N_snv = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])
+				ref_counts = np.round((F_true[:, l + g + adj_cnv_idx] + F_true[:, l + g + adj_cnv_idx_a]) * N[:, cnv_idx] - N_snv).astype(int)
+				F_gen[:, l + snv_new_idx] = N_snv/N[:, cnv_idx]
+				for index in range(len(df_list)):
+					df_pyclone_list[index] = df_pyclone_list[index].append(
+						{'mutation_id': 'snv' + str(snv_idx), 'ref_counts': ref_counts[index], 'var_counts': N_snv[index], \
+						 'normal_cn': 2, 'minor_cn': min(F_gen[index, l + g + adj_cnv_idx], F_gen[index, l + g + adj_cnv_idx_a]), \
+						 'major_cn': max(F_gen[index, l + g + adj_cnv_idx], F_gen[index, l + g + adj_cnv_idx_a])}, ignore_index=True)
+		#print(np.sqrt(np.mean(np.square(F_gen - F_true))))
+		print(df_pyclone_list)
+		return F_gen, df_pyclone_list
 
 
 def generate_f_unsampled(u, c, c_cn, r, seg_cn_idx_dict, snv_cn_idx_dict, det, snv_un_idx_list, d_unsampled, bool_list, N, F_gen_cn):
