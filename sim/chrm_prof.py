@@ -112,7 +112,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 
 		SNV_OrgNode.SNV_Mut_children.append(SNV_MutNode)
 		SNV_MutNode.SNV_Org_parent = SNV_OrgNode
-		print('snv:',orgNode.chrm, orgNode.pm, pos, org_pos)
+		#print('snv:',orgNode.chrm, orgNode.pm, pos, org_pos)
 		return True
 
 	def deepcopy_(self, other_muts):
@@ -158,10 +158,10 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		while head != None:
 			head.parent.children.remove(head) # remove curent MutNode from children list of OrgNode
 			if snv:
-				print('rem:snv_mut_children', [j.pos for j in head.SNV_Mut_children])
+				#print('rem:snv_mut_children', [j.pos for j in head.SNV_Mut_children])
 				for snv_child in head.SNV_Mut_children:
 					snv_child.SNV_Org_parent.SNV_Mut_children.remove(snv_child)
-					print(snv_child.Mut_parent.SNV_Mut_children)
+					#print(snv_child.Mut_parent.SNV_Mut_children)
 					snv_child.Mut_parent.SNV_Mut_children.remove(snv_child)
 					del snv_child
 			prev = head
@@ -282,7 +282,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			return False
 		self._2split(bgn, end) # split mutated and original list nodes at bgn and end positions
 		for i_amp in range(amp_num):
-			print(i_amp)
+			#print(i_amp)
 			insR, head, tail = _copy_from_to(self.mut, bgn, end, snv) # copy list from bgn to end
 			### xf: copy means copy the whole identity including the parent-children relationship
 			### xf: duplicate two consecutive nodes, to visualize it looks like: insR-head-.....-tail-insL for MutNode
@@ -302,7 +302,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 				if snv:
 					for snv_child in head.SNV_Mut_children:
 						snv_child.pos += seg_len
-						print('child:',snv_child.pos)
+						#print('child:',snv_child.pos)
 				head = head.r
 
 
