@@ -26,7 +26,7 @@ import file_manager as fm
 #  input: in_dir (str) full path to input directory containing .vcf file(s)
 # output: bp_attr (dict) key is breakpoint index. val is tuple (chrm (str), pos (int), extends_left (bool))
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def get_mats(in_dir, n):
+def get_mats(in_dir, n, const=10):
     print("get mats")
     sampleList = fm._fnames_with_extension(in_dir, '.vcf')
 
@@ -54,7 +54,7 @@ def get_mats(in_dir, n):
     SNV_idx_dict, g = get_snv_idx_dict(SNV_sample_dict)
 
     F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort\
-        = make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict)
+        = make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const=const)
     bp_attr = _inv_dic(BP_idx_dict)
 
     F_phasing = np.array(F_phasing).astype(float)
@@ -136,8 +136,8 @@ def make_3d_list(r,c,d):
     return result
 
 # output: cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict):
-    const = 10
+def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const = 10):
+
     print("make matrices")
 
     if l + g <= const * (2*n-1):
@@ -317,7 +317,7 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
 
     # create dictionary with key as segment index and val as tuple containing (chrm, bgn, end)
     cv_attr = { i: (chrm, bgn, end) for chrm, lst in seg_dic.iteritems() for (i, bgn, end) in lst }
-
+    print(sampled_snv_idx_list_sorted,unsampled_snv_idx_list_sorted)
     return F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_idx_list_sorted, unsampled_snv_idx_list_sorted
     ### A and H are empty lists
 
