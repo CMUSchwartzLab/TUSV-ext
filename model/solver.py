@@ -1,19 +1,15 @@
-#     file: solver.py
-#   author: Jesse Eaton
-#  created: 9/30/2017
-# modified: 10/14/2017
-#  purpose: Linear program solver of single instance of mixed copy number F, solving for either
-#              copy number C or mixture U where the other is assumed constant
+#   author: Jesse Eaton and Xuecong Fu
+#   the file is originated from solver in TUSV by Jesse Eaton. Xuecong Fu fixed bugs and extended it.
 
 
 # # # # # # # # # # #
 #   I M P O R T S   #
 # # # # # # # # # # #
 
-import sys  # for command line arguments
-import os  # for manipulating files and folders
-import argparse  # for command line arguments
-import math  # it's math. we're gonna need it
+import sys  
+import os  
+import argparse  
+import math  
 import numpy as np
 import gurobipy as gp
 
@@ -28,7 +24,7 @@ MAX_SOLVER_ITERS = 5000
 # # # # # # # # # # # # #
 #   F U N C T I O N S   #
 # # # # # # # # # # # # #
-### xf: modified with SNVS
+
 #  input: F (np.array of float) [m, l+g+2r] mixed copy number f_p,s of mutation s in sample p
 #         Q (np.array of 0 or 1) [l+g, r] q_b,s == 1 if breakpoint b is in segment s. 0 otherwise
 #         G (np.array of 0 or 1) [l, l] g_s,t == 1 if breakpoints s and t are mates. 0 otherwise
@@ -40,6 +36,7 @@ MAX_SOLVER_ITERS = 5000
 #         lamb2 (float) regularization term to weight breakpoint frequency error
 #         max_iters (int) maximum number of iterations to predict U then C if convergence not reached
 #         time_limit (int) maximum number of seconds the solver will run
+#         only_leaf (boolean) the flag indicating the if the model assumes that samples are unmixed by only leaf node clones, default is False.
 # output: U (np.array of float) [m, 2n-1] 0 <= u_p,k <= 1. percent of sample p made by clone k
 #         C (np.array of int) [2n-1, l+g+2r] int copy number c_k,s of mutation s in clone k
 #         E (np.array of int) [2n-1, 2n-1] e_i,j == 1 iff edge (i,j) is in tree. 0 otherwise
@@ -47,7 +44,7 @@ MAX_SOLVER_ITERS = 5000
 #         W_all (np.array of int) [2n-1, 2n-1] number of breakpoints appearing along each edge in tree
 #         obj_val (float) objective value of final solution
 #         err_msg (None or str) None if no error occurs. str with error message if one does
-#  notes: l (int) is number of structural variants. r (int) is number of copy number regions, 2r means we phase it for allelic copy numbers,
+#  notes: l (int) is number of breakpoints depicting structural variants. r (int) is number of copy number regions, 2r means we phase it for allelic copy numbers,
 #         g (int) is number of single nucleotide variants.
 
 def get_UCE(F_phasing, Q, G, A, H, n, c_max, lamb1, lamb2, max_iters, time_limit=None, only_leaf=False):
@@ -126,12 +123,12 @@ def get_U(F_phasing, C, n, R, W_node, l, only_leaf):
 #         lamb2 (float) regularization term to weight breakpoint frequency error
 #         time_limit (int) maximum number of seconds the solver will run
 # output: obj_val (float) objective value of solution
-#         C (np.array of int) [2n-1, l+r] int copy number c_k,s of mutation s in clone k
+#         C (np.array of int) [2n-1, l+g+2r] int copy number c_k,s of mutation s in clone k
 #         E (np.array of int) [2n-1, 2n-1] e_i,j == 1 iff edge (i,j) is in tree. 0 otherwise
 #         R (np.array of int) [2n-1, 2n-1] cost of each edge in the tree
 #         W_all (np.array of int) [2n-1, 2n-1] number of breakpoints appearing along each edge in tree
 #         err_msg (None or str) None if no error occurs. str with error message if one does
-#  notes: l (int) is number of structural variants. r (int) is number of copy number regions
+#  notes: l (int) is number of breakpoints. g (int) is the number of single nucleotide variants. r (int) is number of copy number regions
 def get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     l_g, r = Q.shape
     l, _ = G.shape
@@ -158,9 +155,7 @@ def get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
     _set_tree_constraints(mod, E, n)
     _set_ancestry_constraints(mod, A, E, N)
     _set_cost_constraints(mod, R, C, E, n, l, g, r, c_max)
-    #_set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l)
     _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, g, Gam, c_max, D)
-    #_set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l)
     _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, g, r, D, c_max)
     _set_bpf_penalty(mod, S, Pi, U, C, Gam)
 
@@ -187,7 +182,6 @@ def get_C(F_phasing, U, Q, G, A, H, n, c_max, lamb1, lamb2, time_limit=None):
         for b in xrange(0, l+g):
             W_node[j, b] = sum([int(W[i, j, b].X) for i in xrange(0, N)])
     return mod.objVal, C, E, A, R, W_node, W_node_sv, W_node_snv, None
-
 
 
 
@@ -253,26 +247,6 @@ def _set_cost_constraints(mod, R, C, E, n, l, g, r, c_max):
                 mod.addConstr(X2[i, j, s] >= -1 * (C[i, s + l + g + r] - C[j, s + l + g + r]) - (c_max + 1) * (1 - E[i, j]))
             mod.addConstr(R[i, j] == (gp.quicksum(X1[i, j, :]) + gp.quicksum(X2[i, j, :])))
 
-### xf: removed in add_phasing
-# def _set_bp_appearance_constraints(mod, C_bin, W, E, G, n, l, g):
-#     N = 2 * n - 1
-#     X = _get_gp_3D_arr_int_var(mod, N, N, l, 3)
-#     for i in xrange(0, N):
-#         for j in xrange(0, N):
-#             for b in xrange(0, l):  # only 0 if copy num goes from 0 to 1 across edge (i,j)
-#                 mod.addConstr(X[i, j, b] == 2 + C_bin[i, b] - C_bin[j, b] - E[i, j])
-#     X_bin = _get_3D_bin_rep(mod, X, 3)
-#     for i in xrange(0, N):
-#         for j in xrange(0, N):
-#             for b in xrange(0, l):  # set W as bp appearance
-#                 mod.addConstr(W[i, j, b] == 1 - X_bin[i, j, b])
-#             for s in xrange(0, l):
-#                 for t in xrange(0, l):  # breakpoint pairs appear on same edge
-#                     mod.addConstr(W[i, j, s] - W[i, j, t] <= 1 - G[s, t])
-#                     mod.addConstr(W[i, j, s] - W[i, j, t] >= - 1 + G[s, t])
-#     for b in xrange(0, l):  # breakpoints only appear once in the tree
-#         mod.addConstr(gp.quicksum([W[i, j, b] for i in xrange(0, N) for j in xrange(0, N)]) == 1)
-
 
 ### xf: improve the constraints for SV related to CNV, replace the set_bp_appearance_constraints in add_phasing
 def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, g, Gam, c_max, D):
@@ -301,53 +275,8 @@ def _set_bp_gain_and_loss_constraints(mod, C_bin, C, W, E, G, n, l, g, Gam, c_ma
                 mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] + (2 - E[i, j] - D[b] + W[i, j, b]) * (2 * c_max + 2))
                 mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - (1 - E[i, j] + D[b] + W[i, j, b]) * (2 * c_max + 1))
                 mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] + (1 - E[i, j] + D[b] + W[i, j, b]) * (2 * c_max + 2))
-            # for b in xrange(l, l + g):
-            #     con_sgn0 = mod.addVar(vtype=gp.GRB.BINARY)
-            #     mod.addConstr(con_sgn0 == _get_consensus_sgn(mod, Gam[j, b, 0] - Gam[i, b, 0], C[j, b] - C[i, b], -c_max, c_max)) # 2 if both are positive
-            #     con_sgn1 = mod.addVar(vtype=gp.GRB.BINARY)
-            #     mod.addConstr(con_sgn1 == _get_consensus_sgn(mod, Gam[j, b, 1] - Gam[i, b, 1], C[j, b] - C[i, b], -c_max, c_max)) # 0 if both are negative
-            #
-            #     mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] >= C[j, b] - C[i, b] - (4 - E[i, j] - D[b] + W[i, j, b] - con_sgn0) * (2 * c_max + 1))
-            #     mod.addConstr(Gam[j, b, 0] - Gam[i, b, 0] <= C[j, b] - C[i, b] + (2 - E[i, j] - D[b] + W[i, j, b] + con_sgn0) * (2 * c_max + 1))
-            #     mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] >= C[j, b] - C[i, b] - (3 - E[i, j] + D[b] + W[i, j, b] - con_sgn1) * (2 * c_max + 1))
-            #     mod.addConstr(Gam[j, b, 1] - Gam[i, b, 1] <= C[j, b] - C[i, b] + (1 - E[i, j] + D[b] + W[i, j, b] + con_sgn1) * (2 * c_max + 1))
-
-
-### xf: removed this section
-# def _set_ancestry_condition_constraints(mod, C_bin, A, W, U, m, N, l):
-#     W_node = _get_gp_arr_bin_var(mod, N, l)
-#     for j in xrange(0, N):
-#         for b in xrange(0, l):
-#             mod.addConstr(W_node[j, b] == gp.quicksum(W[:, j, b]))  # 1 iff breakpoint b appears at node v_j
-#     X = _get_gp_3D_arr_bin_var(mod, N, N, l)
-#     for i in xrange(0, N):
-#         for j in xrange(0, N):
-#             for b in xrange(0, l):
-#                 mod.addConstr(X[i, j, b] >= A[i, j] + C_bin[j, b] - 1)  # X[i, j, b] == A[i, j] && C_bin[j, b]
-#                 mod.addConstr(X[i, j, b] <= A[i, j])
-#                 mod.addConstr(X[i, j, b] <= C_bin[j, b])
-#     Y = _get_gp_arr_cnt_var(mod, N, l, vmax=N)
-#     for i in xrange(0, N):
-#         for b in xrange(0, l):
-#             mod.addConstr(Y[i, b] == gp.quicksum(A[i, :]) - gp.quicksum(X[i, :, b]))
-#     Y_bin = _get_bin_rep(mod, Y, vmax=N)
-#     Z, Z_bin = {}, {}
-#     for i in xrange(0, N):
-#         for j in xrange(0, N):
-#             Z[(i, j)] = _get_gp_arr_int_var(mod, l, l, vmax=4)  # 3 - w_{i,s} - w_{j,t} - a_{i,j} + \bar{y}_{i,s}
-#             Z_bin[(i, j)] = _get_bin_rep(mod, Z[(i, j)], vmax=4)  # Z_bin 0 if bp s appears in ancestor v_i
-#             for s in xrange(0, l):  # to bp t appearing in descendant v_j
-#                 for t in xrange(0, l):
-#                     mod.addConstr(Z[(i, j)][s, t] == 3 - W_node[i, s] - W_node[j, t] - A[i, j] + Y_bin[i, s])
-#     Phi = _get_gp_arr_cnt_var(mod, m, l)
-#     for p in xrange(0, m):
-#         for b in xrange(0, l):  # Phi[p,s] >= Phi[p,t] constraint only if t appears in ancestor of s and s is never lost
-#             mod.addConstr(Phi[p, b] == gp.quicksum([U[p, k] * C_bin[k, b] for k in xrange(0, N)]))
-#         for s in xrange(0, l):
-#             for t in xrange(0, l):
-#                 mod.addConstr(Phi[p, s] >= Phi[p, t] - 1 + gp.quicksum(
-#                     [(1 - Z_bin[(i, j)][s, t]) for i in xrange(0, N) for j in xrange(0, N)]))
-
+                
+### xf: _set_ancestry_condition_constraints removed 
 
 def _set_segment_copy_num_constraints(mod, Gam, C, Q, W, m, n, l, g, r, D, c_max):
     N = 2 * n - 1
@@ -372,9 +301,9 @@ def _set_bpf_penalty(mod, S, Pi, U, C, Gam):
             bp_cpnum_est = gp.quicksum([U[p, k] * C[k, b] for k in xrange(0, N)])
             mod.addConstr(S[p, b] == _get_abs(mod, Pi[p, b] * sg_cpnum_est - bp_cpnum_est))
 
-#
-#   OBJECTIVE
-#
+# # # # # # # # #
+#   OBJECTIVE   #
+# # # # # # # # #
 
 def _get_objective(mod, F_phasing, U, C, R, S, lamb1, lamb2):  # returns expression for objective
     m, L = F_phasing.shape
@@ -548,9 +477,6 @@ def _as_solved(X):
 # # # # # # # # # # # # # # # # # # # #
 #   H E L P E R   F U N C T I O N S   #
 # # # # # # # # # # # # # # # # # # # #
-
-
-
 
 # generate random U matrix with m rows and 2n-1 cols. vals are between 0.0 and 1.0 and rows sum to 1.0
 def gen_U(m, n):
