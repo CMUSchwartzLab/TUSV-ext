@@ -1,5 +1,5 @@
 #   author: Jesse Eaton and Xuecong Fu
-#   the file is originated from solver in TUSV by Jesse Eaton. Xuecong Fu fixed bugs and extended it.
+#   the file is originated from solver.py in TUSV by Jesse Eaton. Xuecong Fu fixed bugs and extended it to current model TUSV-ext.
 
 
 # # # # # # # # # # #
