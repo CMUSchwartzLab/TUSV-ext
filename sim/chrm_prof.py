@@ -1,7 +1,8 @@
-#     file: chrm_prof.py
-#   author: Jesse Eaton
-#  created: 9/27/2017
-# modified: 9/30/2017
+#   file: chrm_prof.py
+#   author: Jesse Eaton and Xuecong Fu
+#   the file is originated from chrm_prof.py in TUSV codes by Jingyi, Xuecong fixed bugs and extend the simulation to include
+#  allelic inter/intra-chromosomal translocations and single nucleotide variants (SNVs)
+
 #  purpose: ChrmProf class. ChrmProf is a chromosome profile and contains a mutated chrm with
 #             references to the mutations' original position. Keeps track of copy numbers.
 
@@ -50,11 +51,9 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		svs = {}
 		others = {}
 		cur = self.mut
-		#print(self.chrm,self.pm)
 		while cur != None:  ###xf: go through along the chromosome
 			svs, others = _add_sv_to_dict(svs, others, cur, True, chrm, pm)
 			svs, others = _add_sv_to_dict(svs, others, cur, False, chrm, pm)
-			#print(cur.bgn,cur.end, _get_org_pos(cur,True)[0], _get_org_pos(cur,False)[0])
 			cur = cur.r
 
 		# remove any splits that are not actually breakpoints
@@ -158,10 +157,8 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 		while head != None:
 			head.parent.children.remove(head) # remove curent MutNode from children list of OrgNode
 			if snv:
-				#print('rem:snv_mut_children', [j.pos for j in head.SNV_Mut_children])
 				for snv_child in head.SNV_Mut_children:
 					snv_child.SNV_Org_parent.SNV_Mut_children.remove(snv_child)
-					#print(snv_child.Mut_parent.SNV_Mut_children)
 					snv_child.Mut_parent.SNV_Mut_children.remove(snv_child)
 					del snv_child
 			prev = head
@@ -189,8 +186,6 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			return False
 		from_ChrmProf._2split(bgn1, end1) # split mutated and original list nodes at bgn and end positions
 
-		#insR, head, tail = _copy_from_to(from_ChrmProf.mut, bgn1, end1) ### xf: copied head and tail
-		#print(_get_org_pos(head, True)[0])
 		head_, tail_ = _get_head_tail(from_ChrmProf.mut, bgn1, end1) ### xf: original head and tail, to be removed in above codes
 
 		newL_ = head_.l
@@ -202,19 +197,8 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			newL_.r = newR_
 		if newR_ != None:
 			newR_.l = newL_
-		# head_.l = None  ### xf: detach the removed segment MutNode
-		# tail_.r = None
-
-		# remove old nodes from OrgNode children list and delete old nodes
-		# while head_ != None:
-		# 	head_.parent.children.remove(head_) # remove curent MutNode from children list of OrgNode
-		# 	prev = head_
-		# 	head_ = head_.r
-		# 	del prev
-
 		seg_len = end1 - bgn1 + 1
 		right = tail_.r
-
 
 		### xf: remove segment finished, start translocation to the new position in current chromosome
 		self._split(ins_Pos)
@@ -264,15 +248,6 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			head_ = head_.r
 		self.n = self.n + (end1 - bgn1 + 1)
 		from_ChrmProf.n -= (end1 - bgn1 + 1)
-		# mut = from_ChrmProf.mut
-		# while mut is not None:
-		# 	print(mut.bgn, mut.end)
-		# 	mut = mut.r
-		# mut2 = self.mut
-		# while mut2 is not None:
-		# 	print(mut2.bgn, mut2.end)
-		# 	mut2 = mut2.r
-		# print(from_ChrmProf.mut.bgn, self.mut.bgn)
 		return from_ChrmProf
 
 	# duplicate region from bgn to end. returns boolean for complete or not
@@ -304,8 +279,6 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 						snv_child.pos += seg_len
 						#print('child:',snv_child.pos)
 				head = head.r
-
-
 			self.n = self.n + (end - bgn + 1)
 		return True
 
@@ -335,7 +308,7 @@ class ChrmProf:  ### xf: the profile specifically for one chromosome (allele spe
 			return
 
 		k = k - splitMut.bgn # make k the new length of the old node (node that will be split)
-		                     # is is now the number of nucletides in from a node where it should be split
+		                     # it is now the number of nucletides in from a node where it should be split
 
 		# split orgNode1 and all its children
 		### xf: split the orgNode with different position according to whether this mutNode is inv or not
@@ -615,9 +588,7 @@ def _copy_from_to(head, fm, to, snv):
 		curB.parent = curA.parent
 		curB.parent.children.append(curB) # update parent's children pointers
 		if snv:
-			print('copy_from_to:snv_mut_children',[j.pos for j in curA.SNV_Mut_children])
 			for snv_child in curA.SNV_Mut_children:
-				#print(snv_child.pos)
 				mutB = snv_child.copy()
 				mutB.SNV_Org_parent = snv_child.SNV_Org_parent
 				snv_child.SNV_Org_parent.SNV_Mut_children.append(mutB)
@@ -720,12 +691,8 @@ def _add_sv_to_dict(svs, others, cur, isBgn, chrm, pm):
 	curPos, curIsLeft, curChrm, curPM = _get_cur_pos(cur, isBgn)
 	curTup = (curPos, curIsLeft, curChrm, curPM)
 	mateTup = (matePos, mateIsLeft, mateChrm, matePM)
-	#print(curTup, mateTup)
 	if matePos is None:
 		return svs, others
-
-	# curTup = (curPos, curIsLeft, curChrm, curPM)
-	# mateTup = (matePos, mateIsLeft, mateChrm, matePM)
 
 	if curTup not in svs:
 		if curChrm == chrm and curPM == pm:
@@ -800,7 +767,6 @@ def _append_bp_copy_num(svs, others, mut_head):
 		for tup2, val in others_chr.iteritems():
 			if 'copy_num' not in val:
 				others[tup1][tup2]['copy_num'] = 0
-	#print("svs after", svs, "others after", others)
 	return svs, others
 #   DEEP COPY
 #

@@ -1,3 +1,6 @@
+# author: Xuecong Fu
+# create the input of CNT-MD format
+
 import pickle
 import argparse
 import glob

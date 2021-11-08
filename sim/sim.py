@@ -1,13 +1,10 @@
 
-#     file: sim.py
-#   author: Jingyi Wang
-#  created: 10/13/2017
-#  modified: 10/13/2017
-#  input: m, n, lambda, mu, outdir
-#  output: u.tsv, c.tsv, t.dot, sample.vcf
+#   file: sim.py
+#   author: Jingyi Wang and Xuecong Fu
+#  the file is originated from sim.py in TUSV codes by Jingyi, Xuecong fixed bugs and extend the simulation to include
+#  allelic inter/intra-chromosomal translocations and single nucleotide variants (SNVs)
 
-#  co-author: Xuecong Fu
-#  modified: 2021.1-8
+# purpose: the main simulation code
 
 ##########
 # Import #
@@ -91,13 +88,6 @@ def main(argv):
 	
 	# remove chrom_dict later
 	chrom_dict = dict()
-	# chrom_dict[('1', 0)] = chpr.ChrmProf(10000, '1', 0)
-	# chrom_dict[('1', 1)] = chpr.ChrmProf(10000, '1', 1)
-	# chrom_dict[('2', 0)] = chpr.ChrmProf(10000, '2', 0)
-	# chrom_dict[('2', 1)] = chpr.ChrmProf(10000, '2', 1)
-	# chrom_dict[('3', 0)] = chpr.ChrmProf(198295559, '3', 0)
-	# chrom_dict[('3', 1)] = chpr.ChrmProf(198295559, '3', 1)
-
 	chrom_dict[('1', 0)] = chpr.ChrmProf(249198692, '1', 0) #from ICGC CNV data
 	chrom_dict[('1', 1)] = chpr.ChrmProf(249198692, '1', 1)
 	chrom_dict[('2', 0)] = chpr.ChrmProf(243048760, '2', 0)
@@ -220,65 +210,50 @@ def main(argv):
 			F_unsampled_snv_list = []
 			a, h, mate_dict = get_a_h_mate_dict(t, n, constants_dict)
 			output_tsv(U, '/U.tsv', outputFolder)
-			if len(C_list) > 1:
-				for i in range(len(C_list)):
-					F, df_list = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i], bool_list)
-					F_list.append(F)
-					#print(F[:, (l+len(snv_sampled_idx_list[i])):])
-					F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i], C_list[i][:, (l+len(snv_sampled_idx_list[i])):], r, seg_cn_idx_dict, snv_cn_idx_dict, constants_dict['deterministic'], snv_unsampled_idx_list[i], d_unsampled_list[i], bool_list, N, F[:, (l+len(snv_sampled_idx_list[i])):])
-					F_unsampled_snv_list.append(F_unsampled_snv)
-					generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict, snv_sampled_idx_list[i],
-						   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
-						   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, i)
 
-					output_tsv(C_list[i], '/C_' + str(i) + '.tsv', outputFolder)
-					output_tsv(F, '/F_' + str(i) + '.tsv', outputFolder)
-					output_tsv(F_unsampled_snv, '/F_unsampled_snv_' + str(i) + '.tsv', outputFolder)
-					output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv_' + str(i) + '.tsv', outputFolder)
-			else:
-				i=0
-				C = C_list[i]
-				print(t.idx_node_dict)
-				B, B_SV, B_SNV = generate_b(C, l, g)
-				W, W_SV, W_SNV = generate_w(C, t.idx_node_dict, l, g)
-				F, df_list = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
-							   snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i],
-							   bool_list, constants_dict['read_depth'])
-				F_list.append(F)
-				print(F[:, (l+len(snv_sampled_idx_list[i])):])
-				F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i],
-													   C_list[i][:, (l + len(snv_sampled_idx_list[i])):], r,
-													   seg_cn_idx_dict, snv_cn_idx_dict,
-													   constants_dict['deterministic'], snv_unsampled_idx_list[i],
-													   d_unsampled_list[i], bool_list, N,
-													   F[:, (l + len(snv_sampled_idx_list[i])):])
-				F_unsampled_snv_list.append(F_unsampled_snv)
-				cntmd_dict = generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict,
-							   snv_sampled_idx_list[i], snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
-							   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, "")
-				if not os.path.exists(outputFolder + '/fastclone_input'):
-					os.mkdir(outputFolder + '/fastclone_input')
-				if not os.path.exists(outputFolder + '/pyclone_input'):
-					os.mkdir(outputFolder + '/pyclone_input')
-				if not os.path.exists(outputFolder + '/cntmd_input'):
-					os.mkdir(outputFolder + '/cntmd_input')
-				with open('cntmd_dict.pickle', 'wb') as f:
-					pickle.dump(cntmd_dict, f)
-				for i in range(len(df_list)):
-					df_list[i].to_csv(outputFolder + '/fastclone_input/sample' + str(i) + '.tsv', sep='\t')
-					df_list[i]["minor_cn"] = np.round(df_list[i]["minor_cn"]).astype(int)
-					df_list[i]["major_cn"] = np.round(df_list[i]["major_cn"]).astype(int)
-					df_list[i].to_csv(outputFolder + '/pyclone_input/sample' + str(i) + '.tsv', sep='\t')
-				output_tsv(C, '/C.tsv', outputFolder)
-				output_tsv(W, '/W.tsv', outputFolder)
-				output_tsv(W_SV, '/W_SV.tsv', outputFolder)
-				output_tsv(W_SNV, '/W_SNV.tsv', outputFolder)
-				output_tsv(B, '/B.tsv', outputFolder)
-				output_tsv(B_SV, '/B_SV.tsv', outputFolder)
-				output_tsv(B_SNV, '/B_SNV.tsv', outputFolder)
-				output_tsv(F, '/F.tsv', outputFolder)
-				# output_tsv(F_unsampled_snv, '/F_unsampled_snv.tsv', outputFolder)
-				# output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv.tsv', outputFolder)
+			i=0
+			C = C_list[i]
+			print(t.idx_node_dict)
+			B, B_SV, B_SNV = generate_b(C, l, g)
+			W, W_SV, W_SNV = generate_w(C, t.idx_node_dict, l, g)
+			F, df_list = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
+						   snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i],
+						   bool_list, constants_dict['read_depth'])
+			F_list.append(F)
+			print(F[:, (l+len(snv_sampled_idx_list[i])):])
+			F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i],
+												   C_list[i][:, (l + len(snv_sampled_idx_list[i])):], r,
+												   seg_cn_idx_dict, snv_cn_idx_dict,
+												   constants_dict['deterministic'], snv_unsampled_idx_list[i],
+												   d_unsampled_list[i], bool_list, N,
+												   F[:, (l + len(snv_sampled_idx_list[i])):])
+			F_unsampled_snv_list.append(F_unsampled_snv)
+			cntmd_dict = generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict,
+						   snv_sampled_idx_list[i], snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
+						   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, "")
+			if not os.path.exists(outputFolder + '/fastclone_input'):
+				os.mkdir(outputFolder + '/fastclone_input')
+			if not os.path.exists(outputFolder + '/pyclone_input'):
+				os.mkdir(outputFolder + '/pyclone_input')
+			if not os.path.exists(outputFolder + '/cntmd_input'):
+				os.mkdir(outputFolder + '/cntmd_input')
+			with open('cntmd_dict.pickle', 'wb') as f:
+				pickle.dump(cntmd_dict, f)
+			for i in range(len(df_list)):
+				df_list[i].to_csv(outputFolder + '/fastclone_input/sample' + str(i) + '.tsv', sep='\t')
+				df_list[i]["minor_cn"] = np.round(df_list[i]["minor_cn"]).astype(int)
+				df_list[i]["major_cn"] = np.round(df_list[i]["major_cn"]).astype(int)
+				df_list[i].to_csv(outputFolder + '/pyclone_input/sample' + str(i) + '.tsv', sep='\t')
+			output_tsv(C, '/C.tsv', outputFolder)
+			output_tsv(W, '/W.tsv', outputFolder)
+			output_tsv(W_SV, '/W_SV.tsv', outputFolder)
+			output_tsv(W_SNV, '/W_SNV.tsv', outputFolder)
+			output_tsv(B, '/B.tsv', outputFolder)
+			output_tsv(B_SV, '/B_SV.tsv', outputFolder)
+			output_tsv(B_SNV, '/B_SNV.tsv', outputFolder)
+			output_tsv(F, '/F.tsv', outputFolder)
+			# output_tsv(F_unsampled_snv, '/F_unsampled_snv.tsv', outputFolder)
+			# output_tsv(C_unsampled_snv_list[i], '/C_unsampled_snv.tsv', outputFolder)
 
 		edge_list_pickle = open(outputFolder + "/edge_list.pickle", 'wb')
 		pickle.dump(edge_list, edge_list_pickle)
@@ -1208,7 +1183,6 @@ class TreeNode:
 		self.right = None
 		self.parent = None
 
-
 class svCallData:
 	def __init__(self, gt = '0|0', cnadj = '0', bdp = '0', dp = '100'):
 		self.GT = gt
@@ -1219,6 +1193,7 @@ class svCallData:
 
 	def __call__(self, var):
 		return [self.CNADJ, self.BDP, self.DP]
+
 
 class snvCallData:
 	def __init__(self, gt = '0|0', cnadj = '0'):

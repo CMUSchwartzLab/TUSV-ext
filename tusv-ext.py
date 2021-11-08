@@ -1,5 +1,5 @@
-# author: Jesse Eaton, Xuecong Fu
-# backbone was adopted from original TUSV codes
+#   author: Jesse Eaton, Xuecong Fu
+#   the file is originated from tusv.py from TUSV by Jesse. Xuecong Fu fixed bugs and extend to current model TUSV-est.
 
 # # # # # # # # # # #
 #   I M P O R T S   #
@@ -61,7 +61,6 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
     F_phasing_full, F_unsampled_phasing_full, Q_full, Q_unsampled_full, G, A, H, bp_attr, cv_attr, F_info_phasing, \
     F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort = gm.get_mats(in_dir, n, const=const, sv_ub=sv_ub)
     Q_full, Q_unsampled_full, G, A, H, F_phasing_full, F_unsampled_phasing_full = check_valid_input(Q_full, Q_unsampled_full,G, A, H, F_phasing_full, F_unsampled_phasing_full)
-    #print(F_info_phasing)
 
     np.savetxt(out_dir + "/F_info_phasing.csv", F_info_phasing, delimiter='\t', fmt='%s')
     np.savetxt(out_dir + "/F_unsampled_info_phasing.csv", F_unsampled_info_phasing, delimiter='\t', fmt='%s')

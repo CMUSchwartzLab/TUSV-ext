@@ -1,10 +1,8 @@
 
-#     file: gene_prof.py
-#   author: Jingyi Wang
-#  created: 10/05/2017
-#  modified: 10/09/2017
-#  purpose: Genome Prof class. GenomeProf is a profile for each patient that contains 48 chrom profiles (two for each pair of chromsome)
-
+#   file: gene_prof.py
+#   author: Jingyi Wang and Xuecong Fu
+#   the file is originated from gene_prof.py in TUSV codes by Jingyi, Xuecong fixed bugs and extend the simulation to include
+#  allelic inter/intra-chromosomal translocations and single nucleotide variants (SNVs)
 
 ##########
 # Import #
@@ -73,12 +71,10 @@ class GeneProf:
 		self.exp_mut_count_snv = self.constants_dict['snv_mut_lambda']
 
 
-
     # get total number of mutations for the sample randomly based on mutation count distribution
 	def get_mut_count(self):
 		maxCount = int(round(np.random.poisson(self.exp_mut_count)))
 		return maxCount
-
 
 	# get mutation type, position, size, etc. randomly
 	def random_mutation(self):
@@ -135,7 +131,6 @@ class GeneProf:
 				return False
 		return True
 
-
 	# geneProf_list contains list of geneProfs
 	def get_legal_random_mutation(self, geneprof_list):
 		mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos = self.random_mutation()
@@ -147,7 +142,7 @@ class GeneProf:
 		return mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos
 
 
-    # make a single mutation ###xf: lack translocation
+    # make a single mutation
 	def mutate(self, geneprof_list, snv):
 
 		mut_type, mut_chr, mut_size, mut_bgnPos, mut_endPos = self.get_legal_random_mutation(geneprof_list)
@@ -220,7 +215,6 @@ class GeneProf:
 			print 'chromosome index:', i
 			for (pos, isLeft) in sorted(sv_dict[i], key=lambda tup: tup[0]):
 				print "(", pos, ",", isLeft, "):", sv_dict[i][(pos, isLeft)]
-
 
 
 	def print_chrm_seq(self):
