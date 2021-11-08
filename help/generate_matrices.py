@@ -26,7 +26,7 @@ import file_manager as fm
 #  input: in_dir (str) full path to input directory containing .vcf file(s)
 # output: bp_attr (dict) key is breakpoint index. val is tuple (chrm (str), pos (int), extends_left (bool))
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def get_mats(in_dir, n, const=10):
+def get_mats(in_dir, n, const=120, sv_ub=80):
     print("get mats")
     sampleList = fm._fnames_with_extension(in_dir, '.vcf')
 
@@ -42,19 +42,21 @@ def get_mats(in_dir, n, const=10):
         reader = vcf.Reader(open(input_vcf_file, 'r'))
         BP_sample_dict[sample], CN_sample_dict[sample], CN_sample_rec_dict[sample], CN_sample_rec_dict_minor[sample], CN_sample_rec_dict_major[sample], mateIDs, toTuple, SNV_sample_dict[sample] = get_sample_dict(reader)
         # prepend sample index to each breakpoint ID
+        #print(sample, (BP_sample_dict[sample].items()))
         for k, v in mateIDs.iteritems():
             bp_id_to_mate_id[str(i+1) + k] = str(i+1) + v # add all entries from mateIDs (dict) to bp_id_to_mate_id (dict)
             bp_id_to_tuple[str(i+1) + k] = toTuple[k]     # add all entries from toTuple (dict) to bp_id_to_tuple (dict)
 
     BP_idx_dict, l = get_BP_idx_dict(BP_sample_dict)
-
+    G = make_G(BP_idx_dict, bp_id_to_mate_id, bp_id_to_tuple)
     CN_startPos_dict, CN_endPos_dict, r = get_CN_indices_dict(CN_sample_dict)
-    #print(CN_startPos_dict)
-
+    #print(CN_startPos_dict, CN_endPos_dict)
     SNV_idx_dict, g = get_snv_idx_dict(SNV_sample_dict)
+    print(g)
 
-    F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort\
-        = make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const=const)
+    F_phasing, F_unsampled_phasing, G, G_unsampled, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, \
+    unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort \
+        = make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const=const, sv_ub=sv_ub)
     bp_attr = _inv_dic(BP_idx_dict)
 
     F_phasing = np.array(F_phasing).astype(float)
@@ -63,7 +65,7 @@ def get_mats(in_dir, n, const=10):
     F_unsampled_info_phasing = np.array(F_unsampled_info_phasing)
     Q = np.array(Q)
     Q_unsampled = np.array(Q_unsampled)
-    G = make_G(BP_idx_dict, bp_id_to_mate_id, bp_id_to_tuple)
+
 
     abnormal_idx = np.where(np.sum(Q, 1) == 0)[0]
     print("The mutations at ", abnormal_idx, " will be removed due to non-existing bp in CNV")
@@ -80,27 +82,37 @@ def get_mats(in_dir, n, const=10):
     H = np.array(H)
 
     abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
+    print(np.where(np.sum(G, 1) != 2))
+
+    print("The mutations at ", abnormal_idx2, " will be removed due to non-paired breakpoints")
     # F = np.delete(F, abnormal_idx2, axis=1)
     F_phasing = np.delete(F_phasing, abnormal_idx2, axis=1)
     F_info_phasing = np.delete(F_info_phasing, abnormal_idx2, axis=0)
     Q = np.delete(Q, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=1)
+    abnormal_idx22 = np.where(np.sum(G, 1) != 2)[0]
+    print("The mutations at ", abnormal_idx22, " will be removed due to non-paired breakpoints")
+    # F = np.delete(F, abnormal_idx2, axis=1)
+    F_phasing = np.delete(F_phasing, abnormal_idx22, axis=1)
+    F_info_phasing = np.delete(F_info_phasing, abnormal_idx22, axis=0)
+    Q = np.delete(Q, abnormal_idx22, axis=0)
+    G = np.delete(G, abnormal_idx22, axis=0)
+    G = np.delete(G, abnormal_idx22, axis=1)
 
     abnormal_idx_unsampled = np.where(np.sum(Q_unsampled, 1) == 0)[0]
-    print("The mutations at ", abnormal_idx_unsampled, " will be removed due to non-existing bp in CNV")
+    print("The mutations at ", abnormal_idx_unsampled, " will be removed due to non-existing position for unsampled SNVs in CNV")
     # F = np.delete(F, abnormal_idx, axis=1)
     F_unsampled_phasing = np.delete(F_unsampled_phasing, abnormal_idx_unsampled, axis=1)
     F_unsampled_info_phasing = np.delete(F_unsampled_info_phasing, abnormal_idx_unsampled, axis=0)
 
-    Q = np.delete(Q, abnormal_idx, axis=0)
-
     l_g, r = Q.shape
     l, _ = G.shape
     g = l_g - l
+    print(l, g, r)
     A = A[0:m, 0:l] #empty matrix
     H = H[0:m, 0:l]
-    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort
 
 
 #  input: bp_id_to_mate_id
@@ -136,84 +148,206 @@ def make_3d_list(r,c,d):
     return result
 
 # output: cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
-def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const = 10):
+def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, \
+                  CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const=120, sv_ub=80):
 
     print("make matrices")
+    if sv_ub < 0:
+        sampled_sv_idx_list_sorted = np.arange(len(BP_idx_dict))
+        unsampled_sv_idx_list_sorted = np.array([])
+        G_sampled=G
+        G_unsampled=None
+        if l + g <= const:
+            print('yes')
+            F_phasing, Q, A, H = np.zeros((m, l + g + 2 * r)), np.zeros((l + g, r)), \
+                                 np.zeros((m, l)), np.zeros((m, l))
+            F_unsampled_phasing, Q_unsampled = None, None
+            F_info_phasing = make_2d_list(l + g + 2 * r, 3)
+            F_SV = F_phasing[:, :l]
+            F_SV_info = F_info_phasing[:l]
+            F_SNV = F_phasing[:, l:(l + g)]
+            F_SNV_info = F_info_phasing[l:(l + g)]
+            F_SNV_unsampled = None
+            F_SNV_unsampled_info = None
+            Q_unsampled = None
+            F_CNV = F_phasing[:, (l + g):]
+            F_CNV_info = F_info_phasing[(l + g):]
 
-    if l + g <= const * (2*n-1):
-        F_phasing, Q, A, H = np.zeros((m, l + g + 2 * r)), np.zeros((l + g,r)), \
-                                np.zeros((m, l)), np.zeros((m, l))
-        F_info_phasing = make_2d_list(l + g + 2 * r, 3)
-        F_SV = F_phasing[:,:l]
-        F_SV_info = F_info_phasing[:l]
-        F_SNV = F_phasing[:,l:(l+g)]
-        F_SNV_info = F_info_phasing[l:(l + g)]
-        F_SNV_unsampled = None
-        F_SNV_unsampled_info = None
-        F_CNV = F_phasing[:,(l+g):]
-        F_CNV_info = F_info_phasing[(l+g):]
-        Q_unsampled = None
-        # for (chrom, pos), snv_idx in SNV_idx_dict.items():
-        #     F_SNV_info[snv_idx][0] = chrom
-        #     F_SNV_info[snv_idx][1] = pos
-        #     F_SNV_info[snv_idx][2] = "snv_" + str(snv_idx)
-        sampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
-        unsampled_snv_idx_list_sorted = np.array([])
-    elif l <= const * (2*n-1):
-        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = np.zeros((m, const * (2*n-1) + 2 * r)), np.zeros((m, l + g - const * (2*n-1))), \
-            np.zeros((const * (2*n-1), r)), np.zeros((l + g - const * (2*n-1), r)), np.zeros((m, l)), np.zeros((m, l))
-        F_info_phasing, F_unsampled_info_phasing = make_2d_list(const * (2*n-1) + 2 * r, 3), make_2d_list(l + g - const*(2*n-1), 3)
-        F_SV = F_phasing[:,:l]
-        F_SV_info = F_info_phasing[:l]
-        Q_SV = Q[:l]
-        F_SNV = F_phasing[:,l:const * (2*n-1)]
-        F_SNV_info = F_info_phasing[l:const * (2*n-1)]
-        Q_SNV = Q[l:]
-        F_SNV_unsampled = F_unsampled_phasing
-        F_SNV_unsampled_info = F_unsampled_info_phasing
-        Q_SNV_unsampled = Q_unsampled
-        F_CNV = F_phasing[:,const * (2*n-1):]
-        F_CNV_info = F_info_phasing[const * (2*n-1):]
-        sampled_snv_idx_list_sorted = []
-        sampled_list = np.random.choice(a=len(SNV_idx_dict), size=(2*n-1) * const - l, replace=False)
-        unsampled_snv_idx_list_sorted = []
-        for i in np.arange(len(SNV_idx_dict)):
-            if i in sampled_list:
-                sampled_snv_idx_list_sorted.append(i)
-            else:
-                unsampled_snv_idx_list_sorted.append(i)
-        sampled_snv_idx_list_sorted = np.array(sampled_snv_idx_list_sorted)
-        unsampled_snv_idx_list_sorted = np.array(unsampled_snv_idx_list_sorted)
+            # for (chrom, pos), snv_idx in SNV_idx_dict.items():
+            #     F_SNV_info[snv_idx][0] = chrom
+            #     F_SNV_info[snv_idx][1] = pos
+            #     F_SNV_info[snv_idx][2] = "snv_" + str(snv_idx)
+            sampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
+            unsampled_snv_idx_list_sorted = np.array([])
+        elif l <= const:
+            F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = np.zeros((m, const + 2 * r)), np.zeros((m, l + g - const)), \
+            np.zeros((const, r)), np.zeros((l + g - const, r)), np.zeros((m, l)), np.zeros((m, l))
+            F_info_phasing, F_unsampled_info_phasing = make_2d_list(const + 2 * r, 3), make_2d_list(l + g - const, 3)
+            F_SV = F_phasing[:, :l]
+            F_SV_info = F_info_phasing[:l]
+            Q_SV = Q[:l]
+            F_SNV = F_phasing[:, l:const]
+            F_SNV_info = F_info_phasing[l:const]
+            Q_SNV = Q[l:]
+            F_SNV_unsampled = F_unsampled_phasing
+            F_SNV_unsampled_info = F_unsampled_info_phasing
+            Q_SNV_unsampled = Q_unsampled
+            F_CNV = F_phasing[:, const:]
+            F_CNV_info = F_info_phasing[const:]
+            sampled_snv_idx_list_sorted = []
+            sampled_list = np.random.choice(a=len(SNV_idx_dict), size=const - l, replace=False)
+            unsampled_snv_idx_list_sorted = []
+            for i in np.arange(len(SNV_idx_dict)):
+                if i in sampled_list:
+                    sampled_snv_idx_list_sorted.append(i)
+                else:
+                    unsampled_snv_idx_list_sorted.append(i)
+            sampled_snv_idx_list_sorted = np.array(sampled_snv_idx_list_sorted)
+            unsampled_snv_idx_list_sorted = np.array(unsampled_snv_idx_list_sorted)
 
-    elif l > const * (2*n-1):
-        F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H =  np.zeros((m, l + 2 * r)), np.zeros((m, g)), np.zeros((l, r)), \
-                    np.zeros((g, r)), np.zeros((m, l)), np.zeros((m, l))
-        F_info_phasing, F_unsampled_info_phasing = make_2d_list(l + 2 * r, 3), make_2d_list(g, 3)
-        F_SV = F_phasing[:,:l]
-        F_SV_info = F_info_phasing[:l]
-        Q_SV = Q[:l]
-        F_SNV = None
-        F_SNV_info = None
-        Q_SNV = None
-        F_SNV_unsampled = F_unsampled_phasing
-        F_SNV_unsampled_info = F_unsampled_info_phasing
-        Q_SNV_unsampled = Q_unsampled
-        F_CNV = F_phasing[:,l:]
-        F_CNV_info = F_info_phasing[l:]
-        # for (chrom, pos), snv_idx in SNV_idx_dict.items():
-        #     F_SNV_unsampled_info[snv_idx][0] = chrom
-        #     F_SNV_unsampled_info[snv_idx][1] = pos
-        #     F_SNV_unsampled_info[snv_idx][2] = "snv_" + str(snv_idx)
-        sampled_snv_idx_list_sorted = np.array([])
-        unsampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
-
+        elif l > const:
+            F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = np.zeros((m, l + 2 * r)), np.zeros((m, g)), np.zeros(
+                (l, r)), np.zeros((g, r)), np.zeros((m, l)), np.zeros((m, l))
+            F_info_phasing, F_unsampled_info_phasing = make_2d_list(l + 2 * r, 3), make_2d_list(g, 3)
+            F_SV = F_phasing[:, :l]
+            F_SV_info = F_info_phasing[:l]
+            Q_SV = Q[:l]
+            F_SNV = None
+            F_SNV_info = None
+            Q_SNV = None
+            F_SNV_unsampled = F_unsampled_phasing
+            F_SNV_unsampled_info = F_unsampled_info_phasing
+            Q_SNV_unsampled = Q_unsampled
+            F_CNV = F_phasing[:, l:]
+            F_CNV_info = F_info_phasing[l:]
+            # for (chrom, pos), snv_idx in SNV_idx_dict.items():
+            #     F_SNV_unsampled_info[snv_idx][0] = chrom
+            #     F_SNV_unsampled_info[snv_idx][1] = pos
+            #     F_SNV_unsampled_info[snv_idx][2] = "snv_" + str(snv_idx)
+            sampled_snv_idx_list_sorted = np.array([])
+            unsampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
+        else:
+            raise Exception("Error during making matrices")
     else:
-        raise Exception("Error during making matrices")
+        assert sv_ub <= const
+        if l <= sv_ub and l + g <= const:
+            F_phasing, Q, A, H = np.zeros((m, l + g + 2 * r)), np.zeros((l + g,r)), \
+                                    np.zeros((m, l)), np.zeros((m, l))
+            F_unsampled_phasing, Q_unsampled = None, None
+            F_info_phasing = make_2d_list(l + g + 2 * r, 3)
+            F_SV = F_phasing[:,:l]
+            F_SV_info = F_info_phasing[:l]
+            F_SNV = F_phasing[:,l:(l+g)]
+            F_SNV_info = F_info_phasing[l:(l + g)]
+            F_SNV_unsampled = None
+            F_SNV_unsampled_info = None
+            F_CNV = F_phasing[:,(l+g):]
+            F_CNV_info = F_info_phasing[(l+g):]
+            Q_unsampled = None
+            # for (chrom, pos), snv_idx in SNV_idx_dict.items():
+            #     F_SNV_info[snv_idx][0] = chrom
+            #     F_SNV_info[snv_idx][1] = pos
+            #     F_SNV_info[snv_idx][2] = "snv_" + str(snv_idx)
+            sampled_sv_idx_list_sorted = np.arange(len(BP_idx_dict))
+            unsampled_sv_idx_list_sorted = np.array([])
+            sampled_snv_idx_list_sorted = np.arange(len(SNV_idx_dict))
+            unsampled_snv_idx_list_sorted = np.array([])
+        elif l <= sv_ub and l + g > const:
+            F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H = np.zeros((m, const + 2 * r)), np.zeros((m, l + g - const )), \
+                np.zeros((const, r)), np.zeros((l + g - const, r)), np.zeros((m, l)), np.zeros((m, l))
+            F_info_phasing, F_unsampled_info_phasing = make_2d_list(const + 2 * r, 3), make_2d_list(l + g - const, 3)
+            F_SV = F_phasing[:,:l]
+            F_SV_info = F_info_phasing[:l]
+            Q_SV = Q[:l]
+            F_SNV = F_phasing[:,l:const]
+            F_SNV_info = F_info_phasing[l:const]
+            Q_SNV = Q[l:]
+            F_SNV_unsampled = F_unsampled_phasing
+            F_SNV_unsampled_info = F_unsampled_info_phasing
+            Q_SNV_unsampled = Q_unsampled
+            F_CNV = F_phasing[:,const:]
+            F_CNV_info = F_info_phasing[const:]
+            sampled_snv_idx_list_sorted = []
+            sampled_list = np.random.choice(a=len(SNV_idx_dict), size=const - l, replace=False)
+            unsampled_snv_idx_list_sorted = []
+            for i in np.arange(len(SNV_idx_dict)):
+                if i in sampled_list:
+                    sampled_snv_idx_list_sorted.append(i)
+                else:
+                    unsampled_snv_idx_list_sorted.append(i)
+            sampled_snv_idx_list_sorted = np.array(sampled_snv_idx_list_sorted)
+            unsampled_snv_idx_list_sorted = np.array(unsampled_snv_idx_list_sorted)
+            sampled_sv_idx_list_sorted = np.arange(len(BP_idx_dict))
+            unsampled_sv_idx_list_sorted = np.array([])
+
+        elif l > sv_ub and l + g > const:
+            F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H =  np.zeros((m, const + 2 * r)), np.zeros((m, l+g-const)), np.zeros((const, r)), \
+                        np.zeros((l+g-const, r)), np.zeros((m, sv_ub)), np.zeros((m, sv_ub))
+            F_info_phasing, F_unsampled_info_phasing = make_2d_list(const + 2 * r, 3), make_2d_list(l + g - const, 3)
+
+
+            sampled_sv_idx_list_single = np.random.choice(a=len(BP_idx_dict), size=sv_ub // 2, replace=False)
+            sampled_sv_idx_list_paired = np.where(G[sampled_sv_idx_list_single] == 1)[1]
+            sampled_sv_idx_list_paired = np.array(list(set(list(sampled_sv_idx_list_paired))))
+
+            sampled_sv_num = len(sampled_sv_idx_list_paired)
+            F_SV = F_phasing[:,:sampled_sv_num]
+            F_SV_info = F_info_phasing[:sampled_sv_num]
+            Q_SV = Q[:sampled_sv_num]
+            F_SV_unsampled = F_unsampled_phasing[:, :(l-sampled_sv_num)]
+            F_SV_unsampled_info = F_unsampled_info_phasing[:(l-sampled_sv_num)]
+            Q_SV_unsampled = Q_unsampled[:(l-sampled_sv_num)]
+            F_SNV = F_phasing[:, sampled_sv_num:const]
+            F_SNV_info = F_info_phasing[sampled_sv_num:const]
+            Q_SNV = Q[sampled_sv_num:]
+            F_SNV_unsampled = F_unsampled_phasing[:, (l-sampled_sv_num):]
+            F_SNV_unsampled_info = F_unsampled_info_phasing[(l-sampled_sv_num):]
+            Q_SNV_unsampled = Q_unsampled[(l-sampled_sv_num) : ]
+            F_CNV = F_phasing[:,const:]
+            F_CNV_info = F_info_phasing[const:]
+            # for (chrom, pos), snv_idx in SNV_idx_dict.items():
+            #     F_SNV_unsampled_info[snv_idx][0] = chrom
+            #     F_SNV_unsampled_info[snv_idx][1] = pos
+            #     F_SNV_unsampled_info[snv_idx][2] = "snv_" + str(snv_idx)
+
+            sampled_sv_idx_list_sorted = []
+            unsampled_sv_idx_list_sorted = []
+            for i in np.arange(len(BP_idx_dict)):
+                if i in sampled_sv_idx_list_paired:
+                    sampled_sv_idx_list_sorted.append(i)
+                else:
+                    unsampled_sv_idx_list_sorted.append(i)
+            sampled_sv_idx_list_sorted = np.array(sampled_sv_idx_list_sorted)
+            unsampled_sv_idx_list_sorted = np.array(unsampled_sv_idx_list_sorted)
+            print(G)
+            G_sampled = G[sampled_sv_idx_list_sorted,:][:, sampled_sv_idx_list_sorted]
+            G_unsampled = G[unsampled_sv_idx_list_sorted,:][:, unsampled_sv_idx_list_sorted]
+            print("G",G_sampled)
+            sampled_snv_idx_list_sorted = []
+            sampled_list = np.random.choice(a=len(SNV_idx_dict), size=const - len(sampled_sv_idx_list_sorted), replace=False)
+            unsampled_snv_idx_list_sorted = []
+            for i in np.arange(len(SNV_idx_dict)):
+                if i in sampled_list:
+                    sampled_snv_idx_list_sorted.append(i)
+                else:
+                    unsampled_snv_idx_list_sorted.append(i)
+            sampled_snv_idx_list_sorted = np.array(sampled_snv_idx_list_sorted)
+            unsampled_snv_idx_list_sorted = np.array(unsampled_snv_idx_list_sorted)
+
+        else:
+            raise Exception("Error during making matrices")
 
     for (chrom, pos, dir), bp_idx in BP_idx_dict.items():
-        F_SV_info[bp_idx][0] = chrom
-        F_SV_info[bp_idx][1] = pos
-        F_SV_info[bp_idx][2] = "sv_" + str(bp_idx)
+        if bp_idx in sampled_sv_idx_list_sorted:
+            new_idx = np.where(sampled_sv_idx_list_sorted == bp_idx)[0][0]
+            F_SV_info[new_idx][0] = chrom
+            F_SV_info[new_idx][1] = pos
+            F_SV_info[new_idx][2] = "sv_" + str(bp_idx)
+        else:
+            new_idx = np.where(unsampled_sv_idx_list_sorted == bp_idx)[0][0]
+            F_SV_unsampled_info[new_idx][0] = chrom
+            F_SV_unsampled_info[new_idx][1] = pos
+            F_SV_unsampled_info[new_idx][2] = "sv_" + str(bp_idx)
 
     for (chrom, pos), snv_idx in SNV_idx_dict.items():
         if snv_idx in sampled_snv_idx_list_sorted:
@@ -223,7 +357,6 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
             F_SNV_info[new_idx][2] = "snv_" + str(snv_idx)
         else:
             new_idx = np.where(unsampled_snv_idx_list_sorted == snv_idx)[0][0]
-            print(new_idx)
             F_SNV_unsampled_info[new_idx][0] = chrom
             F_SNV_unsampled_info[new_idx][1] = pos
             F_SNV_unsampled_info[new_idx][2] = "snv_" + str(snv_idx)
@@ -252,28 +385,55 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
                     # cn, direction, bdp, dp = temp_bp_info_dict['cn'], temp_bp_info_dict['dir'], temp_bp_info_dict['bdp'], temp_bp_info_dict['dp']
                     cn, direction, = temp_bp_info_dict['cn'], temp_bp_info_dict['dir']
                     bp_idx = BP_idx_dict[(chrom, pos, direction)]
-                    #F[sample_idx][bp_idx] = cn
-                    F_SV[sample_idx][bp_idx] = cn
+                    if bp_idx in sampled_sv_idx_list_sorted:
+                        new_idx = np.where(sampled_sv_idx_list_sorted == bp_idx)[0][0]
+                        #F[sample_idx][bp_idx] = cn
+                        F_SV[sample_idx][new_idx] = cn
 
-                    # A[sample_idx][bp_idx] = bdp
-                    # H[sample_idx][bp_idx] = dp
+                        # A[sample_idx][bp_idx] = bdp
+                        # H[sample_idx][bp_idx] = dp
 
-                    if direction == False and (chrom, pos) in CN_endPos_dict:
-                        cn_idx = CN_endPos_dict[(chrom, pos)]
-                        Q_SV[bp_idx][cn_idx] = 1
-                    elif direction == True and (chrom, pos) in CN_startPos_dict:
-                        cn_idx = CN_startPos_dict[(chrom, pos)]
-                        Q_SV[bp_idx][cn_idx] = 1
-                    else: # search through all posible segments where bp could lie
-                        if chrom in seg_dic.keys():
-                            cn_idx = _get_seg_idx(seg_dic[chrom], pos)
-                            if cn_idx != None:
-                                Q_SV[bp_idx][cn_idx] = 1
+                        if direction == False and (chrom, pos) in CN_endPos_dict:
+                            cn_idx = CN_endPos_dict[(chrom, pos)]
+                            Q_SV[new_idx][cn_idx] = 1
+                        elif direction == True and (chrom, pos) in CN_startPos_dict:
+                            cn_idx = CN_startPos_dict[(chrom, pos)]
+                            Q_SV[new_idx][cn_idx] = 1
+                        else: # search through all posible segments where bp could lie
+                            if chrom in seg_dic.keys():
+                                cn_idx = _get_seg_idx(seg_dic[chrom], pos)
+                                if cn_idx != None:
+                                    Q_SV[new_idx][cn_idx] = 1
+                                else:
+                                    print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(pos) + " is not found in copy number info.")
                             else:
-                                print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(pos) + " is not found in copy number info.")
-                        else:
-                            print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(
-                                pos) + " is not found in copy number info.")
+                                print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(
+                                    pos) + " is not found in copy number info.")
+                    else:
+                        new_idx = np.where(unsampled_sv_idx_list_sorted == bp_idx)[0][0]
+                    #F[sample_idx][bp_idx] = cn
+                        F_SV_unsampled[sample_idx][new_idx] = cn
+
+                        # A[sample_idx][bp_idx] = bdp
+                        # H[sample_idx][bp_idx] = dp
+
+                        if direction == False and (chrom, pos) in CN_endPos_dict:
+                            cn_idx = CN_endPos_dict[(chrom, pos)]
+                            Q_SV_unsampled[new_idx][cn_idx] = 1
+                        elif direction == True and (chrom, pos) in CN_startPos_dict:
+                            cn_idx = CN_startPos_dict[(chrom, pos)]
+                            Q_SV_unsampled[new_idx][cn_idx] = 1
+                        else: # search through all posible segments where bp could lie
+                            if chrom in seg_dic.keys():
+                                cn_idx = _get_seg_idx(seg_dic[chrom], pos)
+                                if cn_idx != None:
+                                    Q_SV_unsampled[new_idx][cn_idx] = 1
+                                else:
+                                    print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(pos) + " is not found in copy number info.")
+                            else:
+                                print("breakpoint id " + str(bp_id) + " at chr " + str(chrom) + " pos " + str(
+                                    pos) + " is not found in copy number info.")
+
 
         for chrom, pos in SNV_sample_dict[sample].keys():
             snv_idx = SNV_idx_dict[(chrom, pos)]
@@ -318,7 +478,7 @@ def make_matrices(m, n, l, g, r, sampleList, BP_sample_dict, BP_idx_dict,  SNV_s
     # create dictionary with key as segment index and val as tuple containing (chrm, bgn, end)
     cv_attr = { i: (chrm, bgn, end) for chrm, lst in seg_dic.iteritems() for (i, bgn, end) in lst }
     print(sampled_snv_idx_list_sorted,unsampled_snv_idx_list_sorted)
-    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_idx_list_sorted, unsampled_snv_idx_list_sorted
+    return F_phasing, F_unsampled_phasing, G_sampled, G_unsampled, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_idx_list_sorted, unsampled_snv_idx_list_sorted, sampled_sv_idx_list_sorted, unsampled_sv_idx_list_sorted
     ### A and H are empty lists
 
 #  input: segs (list of tuple) tuple is ( seg_idx, bgn_pos, end_pos ) for segments of a single chromosome
@@ -341,7 +501,9 @@ def _get_seg_bgn_end_pos(CN_startPos_dict, CN_endPos_dict):
     seg_dic = {}
     for i in idxs:
         chm, bgn = idx_to_bgn[i]
+
         _, end = idx_to_end[i]
+        #print(i, chm, bgn, end)
         if chm not in seg_dic:
             seg_dic[chm] = []
         seg_dic[chm].append((i, bgn, end))
@@ -375,6 +537,7 @@ def get_snv_idx_dict(SNV_sample_dict):
 # val: idx (idx starts from 0)
 def get_BP_idx_dict(BP_sample_dict):
     chrom_pos_dir_dict = dict() # key: chrom, val: set of (pos, dir) tuples
+
     for sample in BP_sample_dict:
         for chrom in BP_sample_dict[sample]:
             if chrom not in chrom_pos_dir_dict:
@@ -395,6 +558,7 @@ def get_BP_idx_dict(BP_sample_dict):
         for pos in chrom_pos_dict[chrom]:
             if (pos, False) in chrom_pos_dir_dict[chrom]:
                 BP_patient_dict[chrom].append((pos, False))
+
             if (pos, True) in chrom_pos_dir_dict[chrom]:
                 BP_patient_dict[chrom].append((pos, True))
 
@@ -405,7 +569,9 @@ def get_BP_idx_dict(BP_sample_dict):
         for (pos, direction) in BP_patient_dict[chrom]:
             if (chrom, pos, direction) in BP_idx_dict:
                 continue
+
             BP_idx_dict[(chrom, pos, direction)] = idx
+            #print(idx, chrom, pos)
             idx += 1
     l = idx
     return BP_idx_dict, l
@@ -440,15 +606,26 @@ def get_sample_dict(reader):
     # bp_idx = 0
     # cnv_idx = 0
     # snv_idx = 0
+    count = 0
+    bp_id_set = set()
     for rec in reader:
         if is_sv_record(rec):
+            count += 1
+            #print(rec)
             if rec.CHROM not in BP_sample_dict:
                 BP_sample_dict[rec.CHROM] = dict()
             if rec.POS not in BP_sample_dict[rec.CHROM]:
                 BP_sample_dict[rec.CHROM][rec.POS] = dict()
             bp_id = rec.ID
+            if bp_id not in bp_id_set:
+                bp_id_set.add(bp_id)
+            else:
+                print(bp_id, 'already in set')
+            #print bp_id
             if bp_id not in BP_sample_dict[rec.CHROM][rec.POS]: # had to add unique identifier since seg len of 1 exists
                 BP_sample_dict[rec.CHROM][rec.POS][bp_id] = {}
+            else:
+                print(bp_id, 'already in set')
             BP_sample_dict[rec.CHROM][rec.POS][bp_id]['id'] = rec.ID
             BP_sample_dict[rec.CHROM][rec.POS][bp_id]['cn'] = rec.samples[0].data.CNADJ
             BP_sample_dict[rec.CHROM][rec.POS][bp_id]['mate_dir'] = rec.ALT[0].remoteOrientation
@@ -483,10 +660,11 @@ def get_sample_dict(reader):
             CN_sample_rec_dict_minor[rec.CHROM][(rec.POS, info_end)] = rec.samples[0].data.CN[0]
             CN_sample_rec_dict_major[rec.CHROM][(rec.POS, info_end)] = rec.samples[0].data.CN[1]
 
-
+    count2 = 0
     for chrom in BP_sample_dict:
         for pos in BP_sample_dict[chrom]:
             for bp_id in BP_sample_dict[chrom][pos]:
+                count2 += 1
                 mate_chr = BP_sample_dict[chrom][pos][bp_id]['mate_chr']
                 mate_pos = BP_sample_dict[chrom][pos][bp_id]['mate_pos']
 
@@ -495,7 +673,7 @@ def get_sample_dict(reader):
                 BP_sample_dict[chrom][pos][bp_id]['dir'] = my_dir
 
                 bp_id_to_tuple[bp_id] = (chrom, pos, my_dir)
-
+    print('count', count, 'count2', count2)
     return BP_sample_dict, CN_sample_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, bp_id_to_mate_id, bp_id_to_tuple, SNV_sample_dict
 
 
@@ -563,9 +741,9 @@ def get_CN_indices_dict(CN_sample_dict):
         for (s,e) in CN_patient_dict[chrom]:
             CN_startPos_dict[(chrom, s)] = idx
             CN_endPos_dict[(chrom, e)] = idx
+            #print(idx, chrom, s, e)
             idx += 1
     r = idx
-
     return CN_startPos_dict, CN_endPos_dict, r
 
 
@@ -575,6 +753,7 @@ def get_CN_indices_dict(CN_sample_dict):
 # output: G (np.array of 0 or 1) [l, l] g_s,t == 1 if breakpoints s and t are mates. 0 otherwise
 def make_G(bp_tuple_to_idx, bp_id_to_mate_id, bp_id_to_tuple):
     l = len(bp_tuple_to_idx.keys())
+    print('makeG', l)
     G = np.zeros((l, l))
 
     for i in xrange(0, l):

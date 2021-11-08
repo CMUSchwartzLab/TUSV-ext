@@ -243,9 +243,9 @@ def main(argv):
 				W, W_SV, W_SNV = generate_w(C, t.idx_node_dict, l, g)
 				F, df_list = generate_f(U, C_list[i], l, len(snv_sampled_idx_list[i]), r, seg_cn_idx_dict, sv_cn_idx_dict,
 							   snv_cn_idx_dict, constants_dict['deterministic'], N, snv_sampled_idx_list[i], d_list[i],
-							   bool_list)
+							   bool_list, constants_dict['read_depth'])
 				F_list.append(F)
-				# print(F[:, (l+len(snv_sampled_idx_list[i])):])
+				print(F[:, (l+len(snv_sampled_idx_list[i])):])
 				F_unsampled_snv = generate_f_unsampled(U, C_unsampled_snv_list[i],
 													   C_list[i][:, (l + len(snv_sampled_idx_list[i])):], r,
 													   seg_cn_idx_dict, snv_cn_idx_dict,
@@ -253,18 +253,21 @@ def main(argv):
 													   d_unsampled_list[i], bool_list, N,
 													   F[:, (l + len(snv_sampled_idx_list[i])):])
 				F_unsampled_snv_list.append(F_unsampled_snv)
-				generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict,
-							   snv_sampled_idx_list[i],
-							   snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
+				cntmd_dict = generate_s_snv(metaFile, t, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv_cn_idx_dict,
+							   snv_sampled_idx_list[i], snv_unsampled_idx_list[i], seg_bgn_idx_dict, seg_end_idx_dict, F,
 							   F_unsampled_snv, U, C_list[i], c_p, c_m, a, h, mate_dict, outputFolder, "")
 				if not os.path.exists(outputFolder + '/fastclone_input'):
 					os.mkdir(outputFolder + '/fastclone_input')
 				if not os.path.exists(outputFolder + '/pyclone_input'):
 					os.mkdir(outputFolder + '/pyclone_input')
+				if not os.path.exists(outputFolder + '/cntmd_input'):
+					os.mkdir(outputFolder + '/cntmd_input')
+				with open('cntmd_dict.pickle', 'wb') as f:
+					pickle.dump(cntmd_dict, f)
 				for i in range(len(df_list)):
 					df_list[i].to_csv(outputFolder + '/fastclone_input/sample' + str(i) + '.tsv', sep='\t')
-					df_list[i]["minor_cn"] = np.round(df["minor_cn"]).astype(int)
-					df_list[i]["major_cn"] = np.round(df["major_cn"]).astype(int)
+					df_list[i]["minor_cn"] = np.round(df_list[i]["minor_cn"]).astype(int)
+					df_list[i]["major_cn"] = np.round(df_list[i]["major_cn"]).astype(int)
 					df_list[i].to_csv(outputFolder + '/pyclone_input/sample' + str(i) + '.tsv', sep='\t')
 				output_tsv(C, '/C.tsv', outputFolder)
 				output_tsv(W, '/W.tsv', outputFolder)
@@ -664,8 +667,7 @@ def generate_c(tree, n, constants_dict, bool_list):
 			for i in range(len(bgns)):
 				cp1 = cps1[i]
 				cp2 = cps2[i]
-				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]),
-														   (chrom, ends[i]))
+				seg_indices_list = get_indices_for_segment(seg_bgn_idx_dict, seg_end_idx_dict, (chrom, bgns[i]), (chrom, ends[i]))
 				for j in range(len(seg_indices_list)):
 					col = seg_indices_list[j] + l
 					if bool_list[col - l]:
@@ -726,7 +728,7 @@ def generate_seg_cp_paternal(tree, n, bool_list):
 
 # given u (m * (2n-1) matrix) and c ((2n-1)*(l+r) matrix), output f (m * (l+r) matrix)
 ### xf: deterministic f vs. generative f
-def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, det, N, snv_idx_list, d, bool_list):
+def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, det, N, snv_idx_list, d, bool_list, read_depth):
 	#print(u.shape, c.shape)
 	print(seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, det, N, snv_idx_list, d, bool_list)
 	print(l, g, r, c.shape)
@@ -735,12 +737,14 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 	if det:
 		return np.dot(u, c)
 	else:
-		df_list = []
+
+		df_pyclone_list = []
 		for i in range(u.shape[0]):
 			df_pyclone = pd.DataFrame(columns=['mutation_id','ref_counts','var_counts','normal_cn','minor_cn','major_cn'])
 			df_pyclone_list.append(df_pyclone)
 		F_true = np.dot(u, c)
 		F_gen = np.zeros((F_true.shape))
+		N = np.random.poisson(read_depth * F_true[:, l+g:])
 		sv_tuple_list = []
 		print("seg_cn_idx_dict", seg_cn_idx_dict)
 		for chrom in sv_cn_idx_dict.keys():
@@ -752,21 +756,21 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 		### generate F for CNVs with randomness
 		for i in range(0, r):
 			#print(F_true[:, l+g+i]/(F_true[:, l+g+i] + F_true[:, l+g+i+r]))
-			F_gen[:, l+g+i] = np.random.binomial(((F_true[:, l+g+i] + F_true[:, l+g+i+r])*N[:,i]).astype(int), F_true[:, l+g+i]/(F_true[:, l+g+i] + F_true[:, l+g+i+r]))/N[:,i]
-			F_gen[:, l+g+r+i] = (F_true[:, l+g+i] + F_true[:, l+g+i+r]) - F_gen[:, l+g+i]
+			F_gen[:, l+g+i] = N[:, i]/read_depth
+			F_gen[:, l+g+r+i] = N[:,i+r]/read_depth
 		### generate F for SVs with randomness, given the generated CNVs
 		for (sv_chr, sv_pos, sv_idx) in sv_tuple_list:
 			cnv_idx = search_sv_cnv_num(sv_chr, sv_pos, seg_cn_idx_dict)
 			adj_cnv_idx = cnv_idx + int(int(d[sv_idx]) == int(bool_list[cnv_idx]))*r
 			adj_cnv_idx_a = cnv_idx + int(int(d[sv_idx]) != int(bool_list[cnv_idx])) * r
 			#print("p", F_true[:, sv_idx],F_true[:, l+g+adj_cnv_idx])
-			N_sv = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))
-			ref_counts = np.round((F_true[:, l+g+adj_cnv_idx] + F_true[:, l+g+adj_cnv_idx_a])*N[:,cnv_idx] - N_sv).astype(int)
-			for index in range(len(df_list)):
-				df_pyclone_list[index] = df_list[index].append({'mutation_id': 'sv' + str(sv_idx), 'ref_counts': ref_counts[index], 'var_counts': N_sv[index], \
+			N_sv = np.random.binomial(N[:,adj_cnv_idx], F_true[:, sv_idx]/(F_true[:, l+g+adj_cnv_idx]))
+			ref_counts = np.round(N[:,adj_cnv_idx] + N[:,adj_cnv_idx_a] - N_sv).astype(int)
+			for index in range(len(df_pyclone_list)):
+				df_pyclone_list[index] = df_pyclone_list[index].append({'mutation_id': 'sv' + str(sv_idx), 'ref_counts': ref_counts[index], 'var_counts': N_sv[index], \
 							   'normal_cn': 2, 'minor_cn': min(F_gen[index,l+g+adj_cnv_idx], F_gen[index,l+g+adj_cnv_idx_a]), \
 							'major_cn': max(F_gen[index,l+g+adj_cnv_idx], F_gen[index,l+g+adj_cnv_idx_a])}, ignore_index=True)
-			F_gen[:, sv_idx] = N_sv/N[:, cnv_idx]
+			F_gen[:, sv_idx] = N_sv/read_depth
 		for i in range(0, len(snv_tuple_list)):
 			(snv_chr, snv_pos), snv_idx = snv_tuple_list[i]
 			if snv_idx in snv_idx_list:
@@ -777,16 +781,24 @@ def generate_f(u, c, l, g, r, seg_cn_idx_dict, sv_cn_idx_dict, snv_cn_idx_dict, 
 				#print(c[:, l + g + adj_cnv_idx])
 				adj_cnv_idx_a = cnv_idx + int(int(d[l+snv_new_idx]) != int(bool_list[cnv_idx])) * r
 				#print("p", F_true[:, l + snv_new_idx], F_true[:, l + g + adj_cnv_idx], F_true[:, l + g + adj_cnv_idx_a] )
-				N_snv = np.random.binomial(np.round(F_gen[:, l+g+adj_cnv_idx]*N[:,cnv_idx]).astype(int), F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])
+				N_snv = np.random.binomial(N[:,adj_cnv_idx], F_true[:, l+snv_new_idx]/F_true[:, l+g+adj_cnv_idx])
 				ref_counts = np.round((F_true[:, l + g + adj_cnv_idx] + F_true[:, l + g + adj_cnv_idx_a]) * N[:, cnv_idx] - N_snv).astype(int)
-				F_gen[:, l + snv_new_idx] = N_snv/N[:, cnv_idx]
-				for index in range(len(df_list)):
+				F_gen[:, l + snv_new_idx] = N_snv/read_depth
+				for index in range(len(df_pyclone_list)):
 					df_pyclone_list[index] = df_pyclone_list[index].append(
 						{'mutation_id': 'snv' + str(snv_idx), 'ref_counts': ref_counts[index], 'var_counts': N_snv[index], \
 						 'normal_cn': 2, 'minor_cn': min(F_gen[index, l + g + adj_cnv_idx], F_gen[index, l + g + adj_cnv_idx_a]), \
 						 'major_cn': max(F_gen[index, l + g + adj_cnv_idx], F_gen[index, l + g + adj_cnv_idx_a])}, ignore_index=True)
 		#print(np.sqrt(np.mean(np.square(F_gen - F_true))))
 		print(df_pyclone_list)
+		# reorder the allelic specific CNs of F and corresponding C
+		for i in range(0, r):
+			#print(F_true[:, l+g+i]/(F_true[:, l+g+i] + F_true[:, l+g+i+r]))
+			for j in range(F_gen.shape[0]):
+				if F_gen[j, l+g+i] < F_gen[j, l+g+r+i]:
+					temp = F_gen[j, l+g+i]
+					F_gen[j, l+g+i] = F_gen[j, l+g+r+i]
+					F_gen[j, l+g+r+i] = temp
 		return F_gen, df_pyclone_list
 
 
@@ -898,8 +910,11 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 	f_m = np.dot(U, c_m)
 	mixed_a = np.dot(U, a) # m * l
 	mixed_h = np.dot(U, h) # m * l
+	cntmd_dict = {}
 	for i in range(len(U)):
 		sample_idx = i + 1
+		cntmd_dict[sample_idx] = {}
+
 		if not os.path.exists(outputFolder + '/sample' + str(sample_prob_idx) + '/'):
 			os.mkdir(outputFolder + '/sample' + str(sample_prob_idx))
 		temp_file = outputFolder + '/sample' + str(sample_prob_idx) + '/sample' + str(sample_idx) + '.vcf'
@@ -908,11 +923,13 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 		temp_writer_unsampled_snv = vcf.Writer(open(temp_file_unsampled_snv, 'w'), vcf_reader)
 		alt_type, gt_cnv = 'CNV', '1|1' # constants for all cnv records
 		for chrom in sorted(seg_cn_idx_dict.keys(),key=int):
+			cntmd_dict[sample_idx][chrom] = []
 			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key = lambda x: int(x[1])):
 				pos = key[0]
 				rec_id = get_cnv_rec_id(val, r)
 				info_end = key[1]
 				cn = [F[i][l + len(snv_sampled_idx) + val], F[i][l + len(snv_sampled_idx) + r + val]]
+				cntmd_dict[sample_idx][chrom].append(F[i][l + len(snv_sampled_idx) + val] + F[i][l + len(snv_sampled_idx) + r + val])
 				temp_writer.write_record(generate_cnv(chrom, pos, rec_id, alt_type, info_end, gt_cnv, cn))
 
 		alt_ori, alt_cS, alt_wMA, gt_sv = True, str(), True, '1|0' # constants for all sv records
@@ -940,6 +957,7 @@ def generate_s_snv(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict, g, snv
 			else:
 				cnadj_snv = F_unsampled_snv[i][np.where(snv_unsampled_idx == val)[0][0]]
 				temp_writer_unsampled_snv.write_record(generate_snv(chrm, pos, rec_id, gt_snv, cnadj_snv))
+	return cntmd_dict
 
 
 def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict,
@@ -950,18 +968,22 @@ def generate_s(metaFile, tree, l, sv_cn_idx_dict, r, seg_cn_idx_dict,
 	f_m = np.dot(U, c_m)
 	mixed_a = np.dot(U, a)  # m * l
 	mixed_h = np.dot(U, h)  # m * l
+	cntmd_dict = {}
 	for i in range(len(U)):
+		cntmd_dict[i+1] = {}
 		sample_idx = i + 1
 		temp_file = outputFolder + '/sample' + str(sample_idx) + '.vcf'
 		temp_writer = vcf.Writer(open(temp_file, 'w'), vcf_reader)
 
 		alt_type, gt_cnv = 'CNV', '1|1'  # constants for all cnv records
 		for chrom in sorted(seg_cn_idx_dict.keys(),key=int):
+			cntmd_dict[i+1][chrom] = []
 			for (key, val) in sorted(seg_cn_idx_dict[chrom].items(), key=lambda x: x[1]):
 				pos = key[0]
 				rec_id = get_cnv_rec_id(val, r)
 				info_end = key[1]
 				cn = [f_p[i][val], f_m[i][val]]
+				cntmd_dict[i + 1][chrom].append(f_p[i][val] + f_m[i][val])
 				temp_writer.write_record(generate_cnv(chrom, pos, rec_id, alt_type, info_end, gt_cnv, cn))
 
 		alt_ori, alt_cS, alt_wMA, gt_sv = True, str(), True, '1|0'  # constants for all sv records
