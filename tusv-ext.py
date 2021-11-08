@@ -1,10 +1,5 @@
-#     file: tusv.py
-#   author: Jesse Eaton
-#  created: 10/13/2017
-# modified: 10/14/2017
-#  purpose: Unmixes mixed copy numbers for breakpoints and segments and infers phylogeny
-#             with various phylogenetic constraints
-
+# author: Jesse Eaton, Xuecong Fu
+# backbone was adopted from original TUSV codes
 
 # # # # # # # # # # #
 #   I M P O R T S   #
@@ -23,7 +18,6 @@ from ete2 import Tree          # for creating phylogenetic trees for .xml output
 from Bio import Phylo          # for creating phylogenies to export as phylo .xml files
 from cStringIO import StringIO # for converting string to file (for creating initial phylo .xml)
 
-# custom modules
 sys.path.insert(0, 'model/')
 sys.path.insert(0, 'help/')
 import solver as sv
@@ -56,24 +50,6 @@ def main(argv):
     args = get_args(argv)
     write_readme(args['output_directory'], args)
     unmix(args['input_directory'], args['output_directory'], args['num_leaves'], args['c_max'], args['lambda1'], args['lambda2'], args['restart_iters'], args['cord_desc_iters'], args['processors'], args['time_limit'], args['metadata_file'], args['num_subsamples'], args['overide_lambdas'], args['constant'], args['sv_upperbound'], args['only_leaf'], args['collapse'], args['threshold'], args['multi_num_clones'])
-
-def main2(argv):
-    args = get_args(argv)
-    write_readme(args['output_directory'], args)
-    upper_directory_split = args['input_directory'].rsplit('/', 1)
-    if upper_directory_split[1] == '':
-        upper_directory_split = upper_directory_split[0].rsplit('/', 1)
-    U = np.loadtxt(upper_directory_split[0] + '/U.tsv', delimiter='\t')
-    C = np.loadtxt(upper_directory_split[0] + '/C.tsv', delimiter='\t')
-    F = np.loadtxt(upper_directory_split[0] + '/F.tsv', delimiter='\t')
-    if len(F.shape) == 1:
-        F = F[np.newaxis,:]
-    if len(U.shape) == 1:
-        U = U[np.newaxis, :]
-    record_true_obj(args['input_directory'], args['output_directory'], args['num_leaves'], args['lambda1'], args['lambda2'],  args['num_subsamples'], args['overide_lambdas'], U, C, F)
-    unmix(args['input_directory'], args['output_directory'], args['num_leaves'], args['c_max'], args['lambda1'],
-      args['lambda2'], args['restart_iters'], args['cord_desc_iters'], args['processors'], args['time_limit'],
-      args['metadata_file'], args['num_subsamples'], args['overide_lambdas'])
 
 
 #  input: num_seg_subsamples (int or None) number of segments to include in deconvolution. these are
@@ -184,7 +160,7 @@ def create_binary_matrix(W_con, A):
     B[B > 1] = 1
     return B
 
-
+# concatenating W matrix for SVs and SNVs
 def concatenate_W(W_SV_TUSV, W_SV_MATCHING, W_SNV_TUSV, W_SNV_MATCHING, sampled_sv_list_sort, unsampled_sv_list_sort, sampled_snv_list_sort, unsampled_snv_list_sort):
     n, l_sampled = W_SV_TUSV.shape
     l_unsampled = W_SV_MATCHING.shape[1]
@@ -207,7 +183,7 @@ def concatenate_W(W_SV_TUSV, W_SV_MATCHING, W_SNV_TUSV, W_SNV_MATCHING, sampled_
     W_con[:, l:] = W_snv_con
     return W_con
 
-
+# create tree from W matrix
 def W2tree(W_sv_total, W_snv_total, E):
     edge_list = np.where(E == 1)
     tree = {}
@@ -224,6 +200,7 @@ def W2tree(W_sv_total, W_snv_total, E):
         mutations[child] += ['snv_' + str(j) for j in mut_snv_list]
     return tree, mutations
 
+# collapse nodes
 def collapse_nodes(U, C, E, A, R, W, W_SV, W_SNV, threshold=0.0, only_leaf=False):
     print("Loading collapse nodes")
     # generate the tree
@@ -376,38 +353,6 @@ class ModifyTree:
             return 0
         else:
             return len(self.tree[idx])
-
-# def record_true_obj(in_dir, out_dir, n, lamb1, lamb2, num_seg_subsamples, should_overide_lambdas, U_true, C_true, F_true):
-#     F_full, F_phasing_full, Q, G, A, H, bp_attr, cv_attr, F_info_phasing = gm.get_mats(in_dir, n)
-#     Q, G, A, H, F_full, F_phasing_full = check_valid_input(Q, G, A, H, F_full, F_phasing_full)
-#
-#     F, F_phasing, Q, org_indxs = randomly_remove_segments(F_full, F_phasing_full, Q, num_seg_subsamples)  # for simulation, it will not change
-#     print(F_phasing, F_true)
-#     assert np.array_equal(F_phasing,F_true)
-#     m = F.shape[0]
-#     l_g, r = Q.shape
-#     print(F_phasing.shape)
-#     # replace lambda1 and lambda2 with input derived values if should_orveride_lamdas was specified
-#     if should_overide_lambdas:
-#
-#         lamb1 = float(l_g + 2*r) / float(2*r) * float(m) / float(2 * (n - 1))/2
-#         lamb2 = float(l_g + 2*r) / float(l_g)/2
-#
-#     F_seg = F[:, l_g:].dot(np.transpose(Q))  # [m, l] mixed copy number of segment containing breakpoint
-#     Pi = np_divide_0(F[:, :l_g], F_seg)
-#     Gamma = _calculate_Gamma(Q, C_true, n)
-#     S = _calculate_S(Pi, U_true, C_true, Gamma, m, l_g)
-#     in_dir_split = in_dir.rsplit('/', 1)
-#     if in_dir_split[1] == '':
-#         in_dir_split = in_dir_split[0].rsplit('/', 1)
-#     with open(in_dir_split[0] + "/edge_list.pickle", 'rb') as f:
-#         edge_list = pickle.load(f)
-#     R = _calculate_R(C_true, edge_list, l_g)
-#     obj_val = _calculate_obj_val(F_phasing, C_true, U_true, R, S, lamb1, lamb2)
-#     with open(out_dir + "/true_objective", 'w') as g:
-#         g.write(str(obj_val))
-#
-
 
 # creates a readme file with the command in it. 
 def write_readme(dname, args, script_name = os.path.basename(__file__)):
@@ -654,9 +599,7 @@ def check_valid_input(Q, Q_unsampled, G, A, H,F_phasing_full, F_unsampled_phasin
     l_g, r = np.shape(Q)
     print(l_g, r)
     l, _ = np.shape(G)
-    print(l)
     g = l_g - l
-    print(l, g, r)
     m = np.shape(A)[0]
     Q_msg = 'There is an issue with input binary matrix Q (indicates which segment each breakpoint belongs to). Each breakpoint must belong to exactly one segment.'
     Q_unsampled_msg = 'There is an issue with input binary matrix Q (indicates which segment each SNV belongs to). Each SNV must belong to exactly one segment.'
@@ -669,17 +612,6 @@ def check_valid_input(Q, Q_unsampled, G, A, H,F_phasing_full, F_unsampled_phasin
     raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
     raiseif(not np.all(np.sum(Q_unsampled, 1) == 1), Q_unsampled_msg)
 
-
-    # abnormal_idx3 = np.where(np.sum(G, 0) != 2)[0]
-    # print(abnormal_idx3)
-    # Q = np.delete(Q, abnormal_idx3, axis=0)
-    # G = np.delete(G, abnormal_idx3, axis=0)
-    # G = np.delete(G, abnormal_idx3, axis=1)
-    # F_full = np.delete(F_full, abnormal_idx3, axis=1)
-    # F_phasing_full = np.delete(F_phasing_full, abnormal_idx3, axis=1)
-    # l, r = np.shape(Q)
-    # print(G)
-    # print(l, r)
     print(np.where(np.sum(G, 0) != 2), np.where(np.sum(G, 0) != 2))
     raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
     for i in xrange(0, l):
