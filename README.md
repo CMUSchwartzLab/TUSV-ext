@@ -14,12 +14,11 @@ The packages you will need to install are listed below.
 
 ### Gurobi License
 
-To obtain a Gurobi license, you can sign up as an academic user here [http://www.gurobi.com/registration/academic-license-reg](http://www.gurobi.com/registration/academic-license-reg) and follow the instructions for downloading a license. 
+To obtain a Gurobi license, you can sign up as an academic user here [https://www.gurobi.com/downloads/end-user-license-agreement-academic/](https://www.gurobi.com/downloads/end-user-license-agreement-academic/) and follow the instructions for downloading a license. 
 
 ## Running
 
 * tusv.py
-* multi_tusv.py
 
 The script `tusv.py` takes as input a single directory containing one or multiple `.vcf` files. Go here [https://samtools.github.io/hts-specs/VCFv4.2.pdf](https://samtools.github.io/hts-specs/VCFv4.2.pdf) for specifications on the `.vcf` format. Sample input can be found in `tusv/data/example/patient1/`. Each `.vcf` file corresponds to a patient sample and all records inside each `.vcf` file contain the structural variants and copy number segments for that sample. The script `multi_tusv.py` is a wrapper script of `tusv.py` and takes as input a directory where each subdirectory contains one or multiple `.vcf` files. Both scripts take required inputs
 
