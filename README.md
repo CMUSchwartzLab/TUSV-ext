@@ -18,7 +18,7 @@ To obtain a Gurobi license, you can sign up as an academic user here [https://ww
 
 ## Running
 
-* tusv.py
+* tusv-ext.py
 
 The script `tusv.py` takes as input a single directory containing one or multiple `.vcf` files. Go here [https://samtools.github.io/hts-specs/VCFv4.2.pdf](https://samtools.github.io/hts-specs/VCFv4.2.pdf) for specifications on the `.vcf` format. Sample input can be found in `tusv/data/example/patient1/`. Each `.vcf` file corresponds to a patient sample and all records inside each `.vcf` file contain the structural variants and copy number segments for that sample. The script `multi_tusv.py` is a wrapper script of `tusv.py` and takes as input a directory where each subdirectory contains one or multiple `.vcf` files. Both scripts take required inputs
 
@@ -26,6 +26,10 @@ The script `tusv.py` takes as input a single directory containing one or multipl
 * `-c` maximum copy number allowed for any breakpoint or segment on any node
 * `-t` maximum number of coordinate-descent iterations (program can finish sooner if convergence is reached)
 * `-r` number of random initializations of the coordinate-descent algorithm
+* `-col` binary flag whether to collapse the redundant nodes
+* `-only_leaf` binary flag whether to assume only leaf nodes are in the mixed samples or not
+* `-sv_ub` approximate maximum number of subsampled breakpoints of structural variants, -1 if you don't want to do the subsampling and include all breakpoints
+* `-const` maximum number of total subsampled breakpoints and SNVs
 
 and optional inputs
 
@@ -35,5 +39,3 @@ and optional inputs
 * `-m` maximum time (in seconds) for a single cordinate-descent iteration
 * `-s` number of segments (in addition to those containing breakpoints) that are randomly kept for unmixing. default keeps all segments
 * `-p` (not recommended) number of processors to use. uses all available processors by default
-* `-d` (not recommended) file containing metadata information for output .vcf files
-
