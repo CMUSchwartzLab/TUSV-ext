@@ -27,7 +27,7 @@ The script `tusv.py` takes as input a single directory containing one or multipl
 * `-t` maximum number of coordinate-descent iterations (program can finish sooner if convergence is reached)
 * `-r` number of random initializations of the coordinate-descent algorithm
 * `-col` binary flag whether to collapse the redundant nodes
-* `-only_leaf` binary flag whether to assume only leaf nodes are in the mixed samples or not
+* `-leaf` binary flag whether to assume only leaf nodes are in the mixed samples or not
 * `-sv_ub` approximate maximum number of subsampled breakpoints of structural variants, -1 if you don't want to do the subsampling and include all breakpoints
 * `-const` maximum number of total subsampled breakpoints and SNVs
 
