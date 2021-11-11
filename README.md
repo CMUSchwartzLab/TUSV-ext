@@ -18,7 +18,7 @@ To obtain a Gurobi license, you can sign up as an academic user here [https://ww
 
 ## Running
 
-python tusv-ext.py
+`python tusv-ext.py`
 
 The script `tusv-ext.py` takes as input a single directory containing one or multiple `.vcf` files. Go here [https://samtools.github.io/hts-specs/VCFv4.2.pdf](https://samtools.github.io/hts-specs/VCFv4.2.pdf) for specifications on the `.vcf` format. Each `.vcf` file should contain SV breakpoints, CNVs and SNVs with their processed copy numbers from one sample of a patient. 
 
