@@ -518,7 +518,6 @@ def write_to_files(d, l_g, U, C, E, R, W, W_SV, W_SNV, W_SNV_UNSAMPLED, W_con, o
         fm.touch(fname)
     np.savetxt(fnames[0], U, delimiter = '\t', fmt = '%.8f')
     np.savetxt(fnames[1], C_out, delimiter = '\t', fmt = '%.8f')
-    #np.savetxt(fnames[3], F_full, delimiter = '\t', fmt = '%.8f')
     np.savetxt(fnames[4], W, delimiter = '\t', fmt = '%d')
     np.savetxt(fnames[10], W_SV, delimiter='\t', fmt='%d')
     np.savetxt(fnames[11], W_SNV, delimiter='\t', fmt='%d')
