@@ -42,3 +42,8 @@ The following inputs are optional:
 * `-m` maximum time (in seconds) for a single cordinate-descent iteration
 * `-s` number of segments (in addition to those containing breakpoints) that are randomly kept for unmixing. default keeps all segments
 * `-p` (not recommended) number of processors to use. uses all available processors by default
+
+Outputs:
+* `C.tsv` the C matrix which is variants copy number profiles of each clone
+* `U.tsv` the U matrix which is the frequencies of each clone in each sample
+* `T.dot` the inferred phylogenetic tree
