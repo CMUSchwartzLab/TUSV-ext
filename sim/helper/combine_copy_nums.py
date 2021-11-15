@@ -1,9 +1,9 @@
 
 #     file: combine_copy_nums.py
-#   author: Jingyi Wang
+#   author: Jingyi Wang and Xuecong Fu
 #  created: 9/29/2017
 # modified: 10/24/2017
-#  purpose: combine list of triplets into triplet according to list of usages
+#  purpose: originally to combine list of triplets into triplet according to list of usages, Xuecong extended it to apply to list of quartets
 
 
 #############
