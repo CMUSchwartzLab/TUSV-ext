@@ -18,10 +18,13 @@ To obtain a Gurobi license, you can sign up as an academic user here [https://ww
 
 ## Running
 
-* tusv-ext.py
+`python tusv-ext.py`
 
-The script `tusv.py` takes as input a single directory containing one or multiple `.vcf` files. Go here [https://samtools.github.io/hts-specs/VCFv4.2.pdf](https://samtools.github.io/hts-specs/VCFv4.2.pdf) for specifications on the `.vcf` format. Sample input can be found in `tusv/data/example/patient1/`. Each `.vcf` file corresponds to a patient sample and all records inside each `.vcf` file contain the structural variants and copy number segments for that sample. The script `multi_tusv.py` is a wrapper script of `tusv.py` and takes as input a directory where each subdirectory contains one or multiple `.vcf` files. Both scripts take required inputs
+The script `tusv-ext.py` takes as input a single directory containing one or multiple `.vcf` files. Go here [https://samtools.github.io/hts-specs/VCFv4.2.pdf](https://samtools.github.io/hts-specs/VCFv4.2.pdf) for specifications on the `.vcf` format. Each `.vcf` file should contain SV breakpoints, CNVs and SNVs with their processed copy numbers from one sample of a patient. 
 
+Inputs:
+* `-i` the input directory containing vcf files of different samples from one patient
+* `-o` the output directory with deconvoluted results
 * `-n` number of leaves to infer in phylogenetic tree
 * `-c` maximum copy number allowed for any breakpoint or segment on any node
 * `-t` maximum number of coordinate-descent iterations (program can finish sooner if convergence is reached)
@@ -31,7 +34,7 @@ The script `tusv.py` takes as input a single directory containing one or multipl
 * `-sv_ub` approximate maximum number of subsampled breakpoints of structural variants, -1 if you don't want to do the subsampling and include all breakpoints
 * `-const` maximum number of total subsampled breakpoints and SNVs
 
-and optional inputs
+The following inputs are optional:
 
 * `-b` (recommended) binary flag to automatically set hyper-parameters lambda 1 and lambda 2
 * `-l` lambda 1 hyper-parameter. controls phylogenetic cost
@@ -39,3 +42,8 @@ and optional inputs
 * `-m` maximum time (in seconds) for a single cordinate-descent iteration
 * `-s` number of segments (in addition to those containing breakpoints) that are randomly kept for unmixing. default keeps all segments
 * `-p` (not recommended) number of processors to use. uses all available processors by default
+
+Outputs:
+* `C.tsv` the C matrix which is variants copy number profiles of each clone
+* `U.tsv` the U matrix which is the frequencies of each clone in each sample
+* `T.dot` the inferred phylogenetic tree
