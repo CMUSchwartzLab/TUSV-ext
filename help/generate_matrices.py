@@ -82,7 +82,7 @@ def get_mats(in_dir, n, const=120, sv_ub=80):
     H = np.array(H)
 
     abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
-    print(np.where(np.sum(G, 1) != 2))
+    #print(np.where(np.sum(G, 1) != 2))
 
     print("The mutations at ", abnormal_idx2, " will be removed due to non-paired breakpoints")
     # F = np.delete(F, abnormal_idx2, axis=1)
@@ -112,7 +112,7 @@ def get_mats(in_dir, n, const=120, sv_ub=80):
     print(l, g, r)
     A = A[0:m, 0:l] #empty matrix
     H = H[0:m, 0:l]
-    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, G_unsampled, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort
 
 
 #  input: bp_id_to_mate_id
@@ -267,6 +267,8 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
             Q_SNV_unsampled = Q_unsampled
             F_CNV = F_phasing[:,const:]
             F_CNV_info = F_info_phasing[const:]
+            G_sampled = G
+            G_unsampled = None
             sampled_snv_idx_list_sorted = []
             sampled_list = np.random.choice(a=len(SNV_idx_dict), size=const - l, replace=False)
             unsampled_snv_idx_list_sorted = []
@@ -289,6 +291,13 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
             sampled_sv_idx_list_single = np.random.choice(a=len(BP_idx_dict), size=sv_ub // 2, replace=False)
             sampled_sv_idx_list_paired = np.where(G[sampled_sv_idx_list_single] == 1)[1]
             sampled_sv_idx_list_paired = np.array(list(set(list(sampled_sv_idx_list_paired))))
+            while True:
+                if len(sampled_sv_idx_list_paired) < sv_ub:
+                    sampled_sv_idx_list_single = np.append(sampled_sv_idx_list_single, np.random.choice(a=len(BP_idx_dict), size=(sv_ub - len(sampled_sv_idx_list_paired)) // 2, replace=False))
+                    sampled_sv_idx_list_paired = np.where(G[sampled_sv_idx_list_single] == 1)[1]
+                    sampled_sv_idx_list_paired = np.array(list(set(list(sampled_sv_idx_list_paired))))
+                else:
+                    break
 
             sampled_sv_num = len(sampled_sv_idx_list_paired)
             F_SV = F_phasing[:,:sampled_sv_num]
@@ -322,7 +331,7 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
             print(G)
             G_sampled = G[sampled_sv_idx_list_sorted,:][:, sampled_sv_idx_list_sorted]
             G_unsampled = G[unsampled_sv_idx_list_sorted,:][:, unsampled_sv_idx_list_sorted]
-            print("G",G_sampled)
+            print("G", G_sampled)
             sampled_snv_idx_list_sorted = []
             sampled_list = np.random.choice(a=len(SNV_idx_dict), size=const - len(sampled_sv_idx_list_sorted), replace=False)
             unsampled_snv_idx_list_sorted = []

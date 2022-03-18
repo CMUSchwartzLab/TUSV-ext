@@ -1,0 +1,526 @@
+Beginning analysis using:
+2029 mutations
+5 sample(s)
+
+Iteration: 0
+Number of clusters: 2029
+DP concentration: 1.0
+Beta-Binomial precision: 1000
+
+Iteration: 100
+Number of clusters: 15
+DP concentration: 2.86858708262
+Beta-Binomial precision: 950.141633251
+
+Iteration: 200
+Number of clusters: 14
+DP concentration: 1.3174606154
+Beta-Binomial precision: 1158.77075835
+
+Iteration: 300
+Number of clusters: 14
+DP concentration: 3.30406338124
+Beta-Binomial precision: 1293.29668353
+
+Iteration: 400
+Number of clusters: 14
+DP concentration: 1.49445007912
+Beta-Binomial precision: 1423.02156137
+
+Iteration: 500
+Number of clusters: 14
+DP concentration: 2.58752870619
+Beta-Binomial precision: 1405.34279887
+
+Iteration: 600
+Number of clusters: 15
+DP concentration: 2.86798507501
+Beta-Binomial precision: 1527.48381119
+
+Iteration: 700
+Number of clusters: 15
+DP concentration: 2.16647832807
+Beta-Binomial precision: 1589.19618252
+
+Iteration: 800
+Number of clusters: 15
+DP concentration: 1.72530418511
+Beta-Binomial precision: 1611.15154043
+
+Iteration: 900
+Number of clusters: 15
+DP concentration: 1.43171826748
+Beta-Binomial precision: 1649.96787375
+
+Iteration: 1000
+Number of clusters: 15
+DP concentration: 3.35137597602
+Beta-Binomial precision: 1660.41947966
+
+Iteration: 1100
+Number of clusters: 15
+DP concentration: 1.43859742549
+Beta-Binomial precision: 1770.25917608
+
+Iteration: 1200
+Number of clusters: 16
+DP concentration: 3.08286615809
+Beta-Binomial precision: 1826.74624521
+
+Iteration: 1300
+Number of clusters: 15
+DP concentration: 1.62357188775
+Beta-Binomial precision: 1947.70896528
+
+Iteration: 1400
+Number of clusters: 15
+DP concentration: 2.08627361263
+Beta-Binomial precision: 2033.38363327
+
+Iteration: 1500
+Number of clusters: 15
+DP concentration: 2.99465509957
+Beta-Binomial precision: 2035.31846324
+
+Iteration: 1600
+Number of clusters: 15
+DP concentration: 2.20940747752
+Beta-Binomial precision: 1914.82047681
+
+Iteration: 1700
+Number of clusters: 16
+DP concentration: 2.60516769149
+Beta-Binomial precision: 1922.56691498
+
+Iteration: 1800
+Number of clusters: 15
+DP concentration: 2.14225189343
+Beta-Binomial precision: 2082.72923629
+
+Iteration: 1900
+Number of clusters: 16
+DP concentration: 2.93143776608
+Beta-Binomial precision: 1955.14708217
+
+Iteration: 2000
+Number of clusters: 17
+DP concentration: 2.91809608281
+Beta-Binomial precision: 1918.87045051
+
+Iteration: 2100
+Number of clusters: 16
+DP concentration: 1.95123761379
+Beta-Binomial precision: 1898.42907169
+
+Iteration: 2200
+Number of clusters: 16
+DP concentration: 3.06290519955
+Beta-Binomial precision: 1999.70620798
+
+Iteration: 2300
+Number of clusters: 15
+DP concentration: 2.19198631664
+Beta-Binomial precision: 1982.98781576
+
+Iteration: 2400
+Number of clusters: 15
+DP concentration: 1.77829572597
+Beta-Binomial precision: 1875.55617094
+
+Iteration: 2500
+Number of clusters: 15
+DP concentration: 1.56835639653
+Beta-Binomial precision: 1765.37072242
+
+Iteration: 2600
+Number of clusters: 15
+DP concentration: 2.15758176815
+Beta-Binomial precision: 1687.96192838
+
+Iteration: 2700
+Number of clusters: 15
+DP concentration: 2.58965746201
+Beta-Binomial precision: 1619.19313464
+
+Iteration: 2800
+Number of clusters: 14
+DP concentration: 1.88977129679
+Beta-Binomial precision: 1725.41409519
+
+Iteration: 2900
+Number of clusters: 14
+DP concentration: 2.30651896273
+Beta-Binomial precision: 1822.75765898
+
+Iteration: 3000
+Number of clusters: 14
+DP concentration: 2.59865498853
+Beta-Binomial precision: 1940.78265255
+
+Iteration: 3100
+Number of clusters: 14
+DP concentration: 2.71019292601
+Beta-Binomial precision: 1885.90535594
+
+Iteration: 3200
+Number of clusters: 14
+DP concentration: 2.61038396858
+Beta-Binomial precision: 1860.85945344
+
+Iteration: 3300
+Number of clusters: 15
+DP concentration: 3.85855910717
+Beta-Binomial precision: 2028.60797408
+
+Iteration: 3400
+Number of clusters: 14
+DP concentration: 2.05555705583
+Beta-Binomial precision: 2034.68517667
+
+Iteration: 3500
+Number of clusters: 13
+DP concentration: 1.4068766789
+Beta-Binomial precision: 2009.29842156
+
+Iteration: 3600
+Number of clusters: 13
+DP concentration: 1.63853925572
+Beta-Binomial precision: 1879.35820235
+
+Iteration: 3700
+Number of clusters: 14
+DP concentration: 2.22051618553
+Beta-Binomial precision: 1984.41263971
+
+Iteration: 3800
+Number of clusters: 13
+DP concentration: 1.48879043998
+Beta-Binomial precision: 1980.66707137
+
+Iteration: 3900
+Number of clusters: 13
+DP concentration: 1.49719985008
+Beta-Binomial precision: 1817.01462691
+
+Iteration: 4000
+Number of clusters: 13
+DP concentration: 1.05500191984
+Beta-Binomial precision: 1738.64393189
+
+Iteration: 4100
+Number of clusters: 14
+DP concentration: 1.28793380764
+Beta-Binomial precision: 1716.45869894
+
+Iteration: 4200
+Number of clusters: 13
+DP concentration: 2.01993400913
+Beta-Binomial precision: 1723.17329894
+
+Iteration: 4300
+Number of clusters: 13
+DP concentration: 2.22283587404
+Beta-Binomial precision: 1982.93225949
+
+Iteration: 4400
+Number of clusters: 13
+DP concentration: 1.42404501874
+Beta-Binomial precision: 1973.59955029
+
+Iteration: 4500
+Number of clusters: 13
+DP concentration: 2.21166224013
+Beta-Binomial precision: 1965.10643175
+
+Iteration: 4600
+Number of clusters: 15
+DP concentration: 2.45857068477
+Beta-Binomial precision: 2017.16079562
+
+Iteration: 4700
+Number of clusters: 15
+DP concentration: 4.26016757358
+Beta-Binomial precision: 2188.68774684
+
+Iteration: 4800
+Number of clusters: 14
+DP concentration: 3.11783390219
+Beta-Binomial precision: 2093.63627625
+
+Iteration: 4900
+Number of clusters: 14
+DP concentration: 2.38529385332
+Beta-Binomial precision: 2129.08827978
+
+Iteration: 5000
+Number of clusters: 14
+DP concentration: 2.32202349069
+Beta-Binomial precision: 2128.60464879
+
+Iteration: 5100
+Number of clusters: 14
+DP concentration: 1.4005485577
+Beta-Binomial precision: 2066.1444481
+
+Iteration: 5200
+Number of clusters: 14
+DP concentration: 2.35475542826
+Beta-Binomial precision: 2007.27217047
+
+Iteration: 5300
+Number of clusters: 14
+DP concentration: 2.14012670936
+Beta-Binomial precision: 1986.63720526
+
+Iteration: 5400
+Number of clusters: 14
+DP concentration: 2.56405252704
+Beta-Binomial precision: 2034.56302787
+
+Iteration: 5500
+Number of clusters: 14
+DP concentration: 2.42408139763
+Beta-Binomial precision: 2036.67466006
+
+Iteration: 5600
+Number of clusters: 15
+DP concentration: 2.54514994901
+Beta-Binomial precision: 1946.36336906
+
+Iteration: 5700
+Number of clusters: 15
+DP concentration: 1.55142066255
+Beta-Binomial precision: 1892.15486575
+
+Iteration: 5800
+Number of clusters: 16
+DP concentration: 2.14691055618
+Beta-Binomial precision: 1913.25937077
+
+Iteration: 5900
+Number of clusters: 15
+DP concentration: 2.00765317676
+Beta-Binomial precision: 2058.37011431
+
+Iteration: 6000
+Number of clusters: 15
+DP concentration: 2.37522120869
+Beta-Binomial precision: 2151.81523843
+
+Iteration: 6100
+Number of clusters: 15
+DP concentration: 2.66725556621
+Beta-Binomial precision: 2062.38113725
+
+Iteration: 6200
+Number of clusters: 16
+DP concentration: 2.45854666555
+Beta-Binomial precision: 1966.04958892
+
+Iteration: 6300
+Number of clusters: 16
+DP concentration: 1.93356087079
+Beta-Binomial precision: 1969.2417751
+
+Iteration: 6400
+Number of clusters: 16
+DP concentration: 3.02836402146
+Beta-Binomial precision: 1937.70952122
+
+Iteration: 6500
+Number of clusters: 16
+DP concentration: 2.94667880566
+Beta-Binomial precision: 1835.97165272
+
+Iteration: 6600
+Number of clusters: 15
+DP concentration: 2.51459715244
+Beta-Binomial precision: 1867.33484979
+
+Iteration: 6700
+Number of clusters: 14
+DP concentration: 2.93286538791
+Beta-Binomial precision: 1827.77542349
+
+Iteration: 6800
+Number of clusters: 15
+DP concentration: 2.50168086479
+Beta-Binomial precision: 2025.09036025
+
+Iteration: 6900
+Number of clusters: 14
+DP concentration: 2.26823672982
+Beta-Binomial precision: 1967.3756293
+
+Iteration: 7000
+Number of clusters: 16
+DP concentration: 2.18477781362
+Beta-Binomial precision: 2057.41089869
+
+Iteration: 7100
+Number of clusters: 14
+DP concentration: 2.4479187902
+Beta-Binomial precision: 2124.77200611
+
+Iteration: 7200
+Number of clusters: 13
+DP concentration: 2.00906020355
+Beta-Binomial precision: 2077.12213801
+
+Iteration: 7300
+Number of clusters: 13
+DP concentration: 2.30750093417
+/home/ec2-user/anaconda3/envs/pyclone/lib/python2.7/site-packages/pyclone/post_process/loci.py:112: YAMLLoadWarning: calling yaml.load() without Loader=... is deprecated, as the default Loader is unsafe. Please read https://msg.pyyaml.org/load for full details.
+  config = yaml.load(fh)
+Beta-Binomial precision: 2186.45528188
+
+Iteration: 7400
+Number of clusters: 13
+DP concentration: 2.78675931774
+Beta-Binomial precision: 2069.61800769
+
+Iteration: 7500
+Number of clusters: 13
+DP concentration: 2.75857508172
+Beta-Binomial precision: 2243.33054624
+
+Iteration: 7600
+Number of clusters: 13
+DP concentration: 2.01228009752
+Beta-Binomial precision: 2140.01996335
+
+Iteration: 7700
+Number of clusters: 13
+DP concentration: 2.20868400429
+Beta-Binomial precision: 2119.3392242
+
+Iteration: 7800
+Number of clusters: 15
+DP concentration: 2.46997880092
+Beta-Binomial precision: 2252.96970663
+
+Iteration: 7900
+Number of clusters: 13
+DP concentration: 1.37251695769
+Beta-Binomial precision: 2222.92996017
+
+Iteration: 8000
+Number of clusters: 14
+DP concentration: 1.22462816945
+Beta-Binomial precision: 2335.403615
+
+Iteration: 8100
+Number of clusters: 14
+DP concentration: 1.70547517927
+Beta-Binomial precision: 2427.49276067
+
+Iteration: 8200
+Number of clusters: 13
+DP concentration: 1.55549460165
+Beta-Binomial precision: 2392.05881469
+
+Iteration: 8300
+Number of clusters: 13
+DP concentration: 1.84283636192
+Beta-Binomial precision: 2424.19481416
+
+Iteration: 8400
+Number of clusters: 13
+DP concentration: 2.28047495815
+Beta-Binomial precision: 2299.04645562
+
+Iteration: 8500
+Number of clusters: 13
+DP concentration: 2.2687456112
+Beta-Binomial precision: 2297.49027492
+
+Iteration: 8600
+Number of clusters: 13
+DP concentration: 2.67627268967
+Beta-Binomial precision: 2362.26234417
+
+Iteration: 8700
+Number of clusters: 14
+DP concentration: 1.2166492664
+Beta-Binomial precision: 2282.97261758
+
+Iteration: 8800
+Number of clusters: 13
+DP concentration: 2.05314971944
+Beta-Binomial precision: 2313.09741467
+
+Iteration: 8900
+Number of clusters: 14
+DP concentration: 2.50764528314
+Beta-Binomial precision: 2339.77002822
+
+Iteration: 9000
+Number of clusters: 14
+DP concentration: 1.70320428772
+Beta-Binomial precision: 2554.74801916
+
+Iteration: 9100
+Number of clusters: 14
+DP concentration: 2.89295576908
+Beta-Binomial precision: 2610.53807334
+
+Iteration: 9200
+Number of clusters: 14
+DP concentration: 2.80589236166
+Beta-Binomial precision: 2687.44989044
+
+Iteration: 9300
+Number of clusters: 15
+DP concentration: 3.44704690481
+Beta-Binomial precision: 2730.41208534
+
+Iteration: 9400
+Number of clusters: 14
+DP concentration: 2.7428281518
+Beta-Binomial precision: 2772.69557991
+
+Iteration: 9500
+Number of clusters: 14
+DP concentration: 1.29740337404
+Beta-Binomial precision: 2769.95483597
+
+Iteration: 9600
+Number of clusters: 14
+DP concentration: 3.01352668815
+Beta-Binomial precision: 2713.98208717
+
+Iteration: 9700
+Number of clusters: 14
+DP concentration: 1.06643424597
+Beta-Binomial precision: 2516.74674055
+
+Iteration: 9800
+Number of clusters: 14
+DP concentration: 2.22659178172
+Beta-Binomial precision: 2516.00222414
+
+Iteration: 9900
+Number of clusters: 14
+DP concentration: 2.31211224119
+Beta-Binomial precision: 2504.76875755
+
+Traceback (most recent call last):
+  File "/home/ec2-user/anaconda3/envs/pyclone/bin/PyClone", line 10, in <module>
+    sys.exit(main())
+  File "/home/ec2-user/anaconda3/envs/pyclone/lib/python2.7/site-packages/pyclone/cli.py", line 78, in main
+    args.func(args)
+  File "/home/ec2-user/anaconda3/envs/pyclone/lib/python2.7/site-packages/pyclone/run.py", line 97, in run_analysis_pipeline
+    args.thin
+  File "/home/ec2-user/anaconda3/envs/pyclone/lib/python2.7/site-packages/pyclone/run.py", line 409, in _cluster_plot
+    samples=samples,
+  File "/home/ec2-user/anaconda3/envs/pyclone/lib/python2.7/site-packages/pyclone/post_process/plot/clusters.py", line 58, in density_plot
+    fig = pp.figure(figsize=(width, height))
+  File "/home/ec2-user/.local/lib/python2.7/site-packages/matplotlib/pyplot.py", line 533, in figure
+    **kwargs)
+  File "/home/ec2-user/.local/lib/python2.7/site-packages/matplotlib/backend_bases.py", line 161, in new_figure_manager
+    return cls.new_figure_manager_given_figure(num, fig)
+  File "/home/ec2-user/.local/lib/python2.7/site-packages/matplotlib/backends/_backend_tk.py", line 1046, in new_figure_manager_given_figure
+    window = Tk.Tk(className="matplotlib")
+  File "/home/ec2-user/anaconda3/envs/pyclone/lib/python2.7/lib-tk/Tkinter.py", line 1819, in __init__
+    self.tk = _tkinter.create(screenName, baseName, className, interactive, wantobjects, useTk, sync, use)
+_tkinter.TclError: no display name and no $DISPLAY environment variable
