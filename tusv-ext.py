@@ -25,7 +25,6 @@ import file_manager as fm      # sanitizes file and directory arguments
 import generate_matrices as gm # gets F, Q, G, A, H from .vcf files
 import printer as pt
 import vcf_help as vh
-from test_simu import _calculate_obj_val, _calculate_R, _calculate_Gamma, _calculate_S, np_divide_0
 import pickle
 from snv_matching import snv_assign
 
