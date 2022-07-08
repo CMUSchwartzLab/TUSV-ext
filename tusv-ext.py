@@ -57,7 +57,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
           num_seg_subsamples, should_overide_lambdas, const, sv_ub, only_leaf, collapse, threshold, multi_num_clones=False):
     print("unmix")
 
-    F_phasing_full, F_unsampled_phasing_full, Q_full, Q_unsampled_full, G, A, H, bp_attr, cv_attr, F_info_phasing, \
+    F_phasing_full, F_unsampled_phasing_full, Q_full, Q_unsampled_full, G, G_unsampled, A, H, bp_attr, cv_attr, F_info_phasing, \
     F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort = gm.get_mats(in_dir, n, const=const, sv_ub=sv_ub)
     Q_full, Q_unsampled_full, G, A, H, F_phasing_full, F_unsampled_phasing_full = check_valid_input(Q_full, Q_unsampled_full,G, A, H, F_phasing_full, F_unsampled_phasing_full)
 
@@ -112,7 +112,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
             U_best, C_best, E_best, A_best, R_best, W_best, W_SV_best, W_SNV_best = collapse_nodes(Us[best_i], Cs[best_i], Es[best_i], As[best_i], Rs[best_i], Ws[best_i], W_SVs[best_i], W_SNVs[best_i], threshold,only_leaf)
         else:
             U_best, C_best, E_best, A_best, R_best, W_best, W_SV_best, W_SNV_best = Us[best_i], Cs[best_i], Es[best_i], As[best_i], Rs[best_i], Ws[best_i], W_SVs[best_i], W_SNVs[best_i]
-        min_node, min_dist, W_unsampled = snv_assign(C_best[:, -2*r:], Q_unsampled, A_best, E_best, U_best, F_unsampled_phasing_full)
+        min_node, min_dist, W_unsampled = snv_assign(C_best[:, -2*r:], Q_unsampled, A_best, E_best, U_best, F_unsampled_phasing_full, G_unsampled)
         np.savetxt(out_dir + "/unsampled_assignment.csv", min_node, delimiter=',')
         np.savetxt(out_dir + "/unsampled_assignment_dist.csv", min_dist, delimiter=',')
         ### concatenate unsampled SV and SNV list
@@ -135,7 +135,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
             if collapse:
                 U, C, E, A_, R, W, W_SV, W_SNV = collapse_nodes(U,C,E,A_,R,W,W_SV, W_SNV,threshold,only_leaf)
 
-            min_node, min_dist, W_SNV_unsampled = snv_assign(C[:, -2 * r:], Q_unsampled, A_, E, U,F_unsampled_phasing_full)
+            min_node, min_dist, W_SNV_unsampled = snv_assign(C[:, -2 * r:], Q_unsampled, A_, E, U,F_unsampled_phasing_full, G_unsampled)
             np.savetxt(out_dir + "/unsampled_SNV_assignment.csv", min_node, delimiter=',')
             np.savetxt(out_dir + "/unsampled_SNV_assignment_dist.csv", min_dist, delimiter=',')
             W_con, W_snv_con = concatenate_W(W_SV, W_SNV, W_SNV_unsampled, sampled_snv_list_sort,
