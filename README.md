@@ -1,5 +1,8 @@
 # TUSV-ext: Reconstructing tumor phylogenetic tree with SVs, CNVs and SNVs
 
+![pipeline_diagram](https://user-images.githubusercontent.com/44757116/178637052-cdf9be5a-687c-4d13-b8db-e886b506646c.png)
+
+
 ## Requirements
 
 The program is written in Python2. Python3 version will come out soon.
