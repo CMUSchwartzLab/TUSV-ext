@@ -2,6 +2,9 @@
 
 ![pipeline_diagram](https://user-images.githubusercontent.com/44757116/178637052-cdf9be5a-687c-4d13-b8db-e886b506646c.png)
 
+This work is published in Xuecong Fu, Haoyun Lei, Yifeng Tao, Russell Schwartz, Reconstructing tumor clonal lineage trees incorporating single-nucleotide variants, copy number alterations and structural variations, Bioinformatics, Volume 38, Issue Supplement_1, July 2022, Pages i125–i133, https://doi.org/10.1093/bioinformatics/btac253
+![image](https://user-images.githubusercontent.com/44757116/197622632-eb3434ba-d800-4620-93b1-5075403e7c06.png)
+
 
 ## Requirements
 
