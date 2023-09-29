@@ -18,6 +18,7 @@ The packages you will need to install are listed below.
 * `ete2`
 * `biopython`
 * `gurobipy`
+* `PyVCF`
 
 ### Gurobi License
 
