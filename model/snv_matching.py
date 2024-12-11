@@ -1,4 +1,4 @@
-#  author: Xuecong Fu
+#  author: Xuecong Fu, Nishat Bristy
 #  Match unsampled SNVs (or even breakpoints if necessary) to inferred phylogeny given the results from TUSV-ext
 
 import numpy as np
@@ -43,7 +43,10 @@ def snv_assign(C_CNV, Q, A, E, U, F, G):
     """
     n, r = C_CNV.shape
     l_g_un = Q.shape[0]
-    l_un = G.shape[0]
+    if G is not None:
+        l_un = G.shape[0]
+    else:
+        l_un = 0
     r = int(r/2)
     clone_idx_range = range(0, n-1) # exclude the root node
     C_hat_1 = np.dot(C_CNV[:, :r], np.transpose(Q)) # n*l_g_un, the copy number of CNV at SNV position
@@ -77,9 +80,9 @@ def snv_assign(C_CNV, Q, A, E, U, F, G):
         F_est = U[:, b][:, np.newaxis] + np.dot(U, A[b, :][:, np.newaxis] * C_hat_1[:, valid_snv_idx2] / C_SNV_clone_1[
                                                     valid_snv_idx2])
         dist[valid_snv_idx2] = np.sum(np.abs(F_est - F[:, valid_snv_idx2]), axis=0)
-
-        dist[: l_un] += np.dot(dist[:l_un], G) #add the other corresponding breakpoint distance to original breakpoint to ensure paired breakpoints are at the same node
-        dist[: l_un] /= 2
+        if G is not None:
+            dist[: l_un] += np.dot(dist[:l_un], G) #add the other corresponding breakpoint distance to original breakpoint to ensure paired breakpoints are at the same node
+            dist[: l_un] /= 2
         dist_stack = np.column_stack((min_dist, dist))
         argmin = np.argmin(dist_stack, axis=-1)
         if (argmin == 1).any():
@@ -93,15 +96,18 @@ def snv_assign(C_CNV, Q, A, E, U, F, G):
         valid_snv_idx2 = np.where(C_SNV_clone_2 > 1)[0]
         F_est = U[:, b][:,np.newaxis] + np.dot(U, A[b, :][:, np.newaxis] * C_hat_2[:, valid_snv_idx2] / C_SNV_clone_2[valid_snv_idx2])
         dist[valid_snv_idx2] = np.sum(np.abs(F_est - F[:, valid_snv_idx2]),axis=0)
-
-        dist[: l_un] += np.dot(dist[:l_un], G) #add the other corresponding breakpoint distance to original breakpoint to ensure paired breakpoints are at the same node
-        dist[: l_un] /= 2
+        if G is not None:
+            dist[: l_un] += np.dot(dist[:l_un], G) #add the other corresponding breakpoint distance to original breakpoint to ensure paired breakpoints are at the same node
+            dist[: l_un] /= 2
 
         dist_stack = np.column_stack((min_dist, dist))
         argmin = np.argmin(dist_stack, axis=-1)
         if (argmin == 1).any():
-            min_node[valid_snv_idx[argmin == 1]] = b
-            min_dist[valid_snv_idx] = np.min(dist_stack, axis=-1)
+            #min_node[valid_snv_idx[argmin == 1]] = b
+            #min_dist[valid_snv_idx] = np.min(dist_stack, axis=-1)
+            min_node[argmin == 1] = b
+            min_dist = np.min(dist_stack, axis=-1)
+    
     W_snv = np.zeros((n, len(min_node)))
     for i in range(len(min_node)):
         W_snv[min_node[i], i] = 1
