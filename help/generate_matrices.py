@@ -100,7 +100,7 @@ def get_mats(in_dir, n, const=120, sv_ub=80):
     G = np.delete(G, abnormal_idx22, axis=0)
     G = np.delete(G, abnormal_idx22, axis=1)
 
-    abnormal_idx_unsampled = np.where(np.sum(Q_unsampled, 1) == 0)[0]
+    abnormal_idx_unsampled = np.where(np.sum(Q_unsampled, 1) != 1)[0]
     Q_unsampled = np.delete(Q_unsampled, abnormal_idx_unsampled, axis=0)
     print("The mutations at ", abnormal_idx_unsampled, " will be removed due to non-existing position for unsampled SNVs in CNV")
     # F = np.delete(F, abnormal_idx, axis=1)
