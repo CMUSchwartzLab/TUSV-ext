@@ -55,10 +55,9 @@ def main(argv):
 #           in addition to any segments contining an SV as thos are manditory for the SV. None is all segments
 def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, num_processors, time_limit, metadata_fname, \
           num_seg_subsamples, should_overide_lambdas, const, sv_ub, only_leaf, collapse, threshold, multi_num_clones=False):
-    print("unmix")
-
+    
     F_phasing_full, F_unsampled_phasing_full, Q_full, Q_unsampled_full, G, G_unsampled, A, H, bp_attr, cv_attr, F_info_phasing, \
-    F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort = gm.get_mats(in_dir, n, const=const, sv_ub=sv_ub)
+    F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort, l_ab_s, g_ab_s,l_ab_un, g_ab_un = gm.get_mats(in_dir, n, const=const, sv_ub=sv_ub)
     Q_full, Q_unsampled_full, G, A, H, F_phasing_full, F_unsampled_phasing_full = check_valid_input(Q_full, Q_unsampled_full,G, A, H, F_phasing_full, F_unsampled_phasing_full)
 
     np.savetxt(out_dir + "/F_info_phasing.csv", F_info_phasing, delimiter='\t', fmt='%s')
@@ -118,7 +117,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
         ### concatenate unsampled SV and SNV list
         W_SV_unsampled = W_unsampled[:,:len(unsampled_sv_list_sort)]
         W_SNV_unsampled = W_unsampled[:,len(unsampled_sv_list_sort):]
-        W_con = concatenate_W(W_SV_best, W_SV_unsampled, W_SNV_best, W_SNV_unsampled, sampled_sv_list_sort, unsampled_sv_list_sort, sampled_snv_list_sort, unsampled_snv_list_sort)
+        W_con = concatenate_W(W_SV_best, W_SV_unsampled, W_SNV_best, W_SNV_unsampled, sampled_sv_list_sort, unsampled_sv_list_sort, sampled_snv_list_sort, unsampled_snv_list_sort, l_ab_s, g_ab_s,l_ab_un, g_ab_un)
         writer = None #build_vcf_writer(F_phasing_full, C_best, org_indxs, G, Q, bp_attr, cv_attr, metadata_fname)
         B = create_binary_matrix(W_con, A_best)
         write_to_files(out_dir, l_g, U_best, C_best, E_best, R_best, W_best, W_SV_best, W_SNV_best, W_unsampled, W_con, obj_vals[best_i], F_phasing_full, F_unsampled_phasing_full, org_indxs, writer, E_pre, R_pre, W_pre, B, A_best)
@@ -139,7 +138,7 @@ def unmix(in_dir, out_dir, n, c_max, lamb1, lamb2, num_restarts, num_cd_iters, n
             np.savetxt(out_dir + "/unsampled_SNV_assignment.csv", min_node, delimiter=',')
             np.savetxt(out_dir + "/unsampled_SNV_assignment_dist.csv", min_dist, delimiter=',')
             W_con, W_snv_con = concatenate_W(W_SV, W_SNV, W_SNV_unsampled, sampled_snv_list_sort,
-                                             unsampled_snv_list_sort)
+                                             unsampled_snv_list_sort, l_ab_s, g_ab_s,l_ab_un, g_ab_un)
             writer = build_vcf_writer(F_phasing_full, C, org_indxs, G, Q, bp_attr, cv_attr, metadata_fname)
             B = create_binary_matrix(W_con, A)
             if not os.path.exists(out_dir + '/num_clone_' + str(n_)):
@@ -159,25 +158,28 @@ def create_binary_matrix(W_con, A):
     return B
 
 # concatenating W matrix for SVs and SNVs
-def concatenate_W(W_SV_TUSV, W_SV_MATCHING, W_SNV_TUSV, W_SNV_MATCHING, sampled_sv_list_sort, unsampled_sv_list_sort, sampled_snv_list_sort, unsampled_snv_list_sort):
+def concatenate_W(W_SV_TUSV, W_SV_MATCHING, W_SNV_TUSV, W_SNV_MATCHING, sampled_sv_list_sort, unsampled_sv_list_sort, sampled_snv_list_sort, unsampled_snv_list_sort, l_ab_s, g_ab_s,l_ab_un, g_ab_un):
     n, l_sampled = W_SV_TUSV.shape
     l_unsampled = W_SV_MATCHING.shape[1]
-    l = l_sampled + l_unsampled
+    l = l_sampled + l_unsampled + l_ab_s + l_ab_un
     g_sampled = W_SNV_TUSV.shape[1]
     g_unsampled = W_SNV_MATCHING.shape[1]
-    g = g_sampled + g_unsampled
+    g = g_sampled + g_unsampled + g_ab_s + g_ab_un
     W_con = np.zeros((n, l + g))
     W_snv_con = np.zeros((n, g))
     if l_unsampled != 0:
+        sampled_sv_list_sort_idx = [i for i in range(l_sampled)] # nb
+        unsampled_sv_list_sort_idx = [i for i in range(l_sampled, l_sampled+l_unsampled)] # nb
+        
         W_con[:, sampled_sv_list_sort] = W_SV_TUSV
         W_con[:, unsampled_sv_list_sort] = W_SV_MATCHING
     else:
-        W_con[:, :l]= W_SV_TUSV
+        W_con[:, sampled_sv_list_sort] = W_SV_TUSV # NISHAT ADDED
     if g_sampled != 0:
         W_snv_con[:, sampled_snv_list_sort] = W_SNV_TUSV
         W_snv_con[:, unsampled_snv_list_sort] = W_SNV_MATCHING
     else:
-        W_snv_con = W_SNV_MATCHING
+        W_snv_con[:, unsampled_snv_list_sort] = W_SNV_MATCHING
     W_con[:, l:] = W_snv_con
     return W_con
 
@@ -200,7 +202,6 @@ def W2tree(W_sv_total, W_snv_total, E):
 
 # collapse nodes
 def collapse_nodes(U, C, E, A, R, W, W_SV, W_SNV, threshold=0.0, only_leaf=False):
-    print("Loading collapse nodes")
     # generate the tree
     tree = ModifyTree(E)
     if not only_leaf:
@@ -291,7 +292,6 @@ def collapse_nodes(U, C, E, A, R, W, W_SV, W_SNV, threshold=0.0, only_leaf=False
     W_new = np.delete(W, remove_idx, axis=0)
     W_SV_new = np.delete(W_SV, remove_idx, axis=0)
     W_SNV_new = np.delete(W_SNV, remove_idx, axis=0)
-    print("collapse", U_new.shape, C_new.shape)
     return U_new, C_new, E_new, A_new, R_new, W_new, W_SV_new, W_SNV_new
 
 
@@ -448,7 +448,6 @@ def printnow(s):
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
 # output: w (vcf_help.Writer) writer to be used to write entire .vcf file
 def build_vcf_writer(F_phasing_full, C, org_indices, G, Q, bp_attr, cv_attr, metadata_fname):
-    print(org_indices)
     m, l_g_2r = F_phasing_full.shape
     n, l_g_2rp = C.shape
     l, _ = G.shape
@@ -456,14 +455,11 @@ def build_vcf_writer(F_phasing_full, C, org_indices, G, Q, bp_attr, cv_attr, met
     l_g = Q.shape[0]
     r = (l_g_2r - l_g)/2
     g = l_g - l
-    print(C[:,:].shape, g_2r)
-
+    
     if org_indices is not None: # only fill in values for segments not used if did not use some segments
         org_indices_minor = [org_indices[i] + r for i in range(len(org_indices))]
         c_org_indices = [ i for i in xrange(0, l_g) ] + org_indices + org_indices_minor
-        print(c_org_indices, len(c_org_indices))
         C_out = -1*np.ones((n, l_g+2*r), dtype = float) # C with segments that were removed inserted back in with avg from F_full
-        print(C_out.shape, C_out[:, c_org_indices].shape)
         C_out[:, c_org_indices] = C[:, :]           #   -1 is an indicator that this column should be omitted in validation
         C = C_out
 
@@ -592,24 +588,22 @@ def write_xml(fname, E, C, l_g):
 #        H (np.array of int) [m, l] h_p,b is number of total reads for breakpoint b in sample p
 #  does: exits with error message if any of the input is not valid
 def check_valid_input(Q, Q_unsampled, G, A, H,F_phasing_full, F_unsampled_phasing_full):  ### A and H are empty matrices
-    print("check valid input")
     l_g, r = np.shape(Q)
-    print(l_g, r)
     l, _ = np.shape(G)
     g = l_g - l
     m = np.shape(A)[0]
     Q_msg = 'There is an issue with input binary matrix Q (indicates which segment each breakpoint belongs to). Each breakpoint must belong to exactly one segment.'
-    Q_unsampled_msg = 'There is an issue with input binary matrix Q (indicates which segment each SNV belongs to). Each SNV must belong to exactly one segment.'
+    Q_unsampled_msg = 'There is an issue with input binary matrix Q_unsampled (indicates which segment each SNV belongs to). Each SNV must belong to exactly one segment.'
 
     G_msg = 'There is an issue with input binary matrix G (indicates which breakpoints are mates). Each breakpoint must be mated into pairs.'
     A_msg = 'There is an issue with input integer matricies A and H (indicating the number of reads mapped to each mated breakpoint and the number of total reads mapping to a breakpoint). The number of mated reads must be less or equal to the total reads and both should be non negative.'
-    print(Q[np.where(np.sum(Q, axis=1) != 1)])
+    Q_un_sum = np.sum(Q_unsampled, 1)
+    qun_idx = np.where(Q_un_sum!=1)
     sys.stdout.flush()
 
     raiseif(not np.all(np.sum(Q, 1) == 1), Q_msg)
     raiseif(not np.all(np.sum(Q_unsampled, 1) == 1), Q_unsampled_msg)
 
-    print(np.where(np.sum(G, 0) != 2), np.where(np.sum(G, 0) != 2))
     raiseif(not np.all(np.sum(G, 0) == 2) or not np.all(np.sum(G, 1) == 2), G_msg)
     for i in xrange(0, l):
         for j in xrange(0, l):
