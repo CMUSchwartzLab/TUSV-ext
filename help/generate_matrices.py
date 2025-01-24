@@ -27,7 +27,6 @@ import file_manager as fm
 # output: bp_attr (dict) key is breakpoint index. val is tuple (chrm (str), pos (int), extends_left (bool))
 #         cv_attr (dict) key (int) is segment index. val is tuple (chrm (str), bgn_pos (int), end_pos (int))
 def get_mats(in_dir, n, const=120, sv_ub=80):
-    print("get mats")
     sampleList = fm._fnames_with_extension(in_dir, '.vcf')
 
     m = len(sampleList)
@@ -52,8 +51,7 @@ def get_mats(in_dir, n, const=120, sv_ub=80):
     CN_startPos_dict, CN_endPos_dict, r = get_CN_indices_dict(CN_sample_dict)
     #print(CN_startPos_dict, CN_endPos_dict)
     SNV_idx_dict, g = get_snv_idx_dict(SNV_sample_dict)
-    print(g)
-
+    
     F_phasing, F_unsampled_phasing, G, G_unsampled, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, \
     unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort \
         = make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict, SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const=const, sv_ub=sv_ub)
@@ -68,52 +66,76 @@ def get_mats(in_dir, n, const=120, sv_ub=80):
 
 
     abnormal_idx = np.where(np.sum(Q, 1) == 0)[0]
+    l_ab_s = len(abnormal_idx[abnormal_idx < l])
+    g_ab_s = len(abnormal_idx[abnormal_idx >= (l)])
     print("The mutations at ", abnormal_idx, " will be removed due to non-existing bp in CNV")
     #F = np.delete(F, abnormal_idx, axis=1)
+    sampled_sv_list_sort = np.delete(sampled_sv_list_sort, abnormal_idx[abnormal_idx < l])
+    sampled_snv_list_sort = np.delete(sampled_snv_list_sort, abnormal_idx-l)  
     F_phasing = np.delete(F_phasing, abnormal_idx, axis=1)
     F_info_phasing = np.delete(F_info_phasing, abnormal_idx, axis=0)
 
     Q = np.delete(Q, abnormal_idx, axis=0)
     G = np.delete(G, abnormal_idx, axis=0)
     G = np.delete(G, abnormal_idx, axis=1)
-
+    
+    
     #sys.stdout.flush()
     A = np.array(A)
     H = np.array(H)
 
     abnormal_idx2 = np.where(np.sum(G, 0) != 2)[0]
-    #print(np.where(np.sum(G, 1) != 2))
-
+    l_ab_s += len(abnormal_idx2)
+    
     print("The mutations at ", abnormal_idx2, " will be removed due to non-paired breakpoints")
     # F = np.delete(F, abnormal_idx2, axis=1)
+    sampled_sv_list_sort = np.delete(sampled_sv_list_sort, abnormal_idx2)
+    
     F_phasing = np.delete(F_phasing, abnormal_idx2, axis=1)
     F_info_phasing = np.delete(F_info_phasing, abnormal_idx2, axis=0)
     Q = np.delete(Q, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=0)
     G = np.delete(G, abnormal_idx2, axis=1)
+    
+    
     abnormal_idx22 = np.where(np.sum(G, 1) != 2)[0]
+    l_ab_s += len(abnormal_idx22)
     print("The mutations at ", abnormal_idx22, " will be removed due to non-paired breakpoints")
     # F = np.delete(F, abnormal_idx2, axis=1)
+    sampled_sv_list_sort = np.delete(sampled_sv_list_sort, abnormal_idx22)
     F_phasing = np.delete(F_phasing, abnormal_idx22, axis=1)
     F_info_phasing = np.delete(F_info_phasing, abnormal_idx22, axis=0)
     Q = np.delete(Q, abnormal_idx22, axis=0)
     G = np.delete(G, abnormal_idx22, axis=0)
     G = np.delete(G, abnormal_idx22, axis=1)
-
+    
+    l_un = len(unsampled_sv_list_sort)
+    g_un = len(unsampled_snv_list_sort)
+    #print(l_un, g_un)
+    
     abnormal_idx_unsampled = np.where(np.sum(Q_unsampled, 1) != 1)[0]
-    Q_unsampled = np.delete(Q_unsampled, abnormal_idx_unsampled, axis=0)
+    l_ab_un = len(abnormal_idx_unsampled[abnormal_idx_unsampled < l_un])
+    g_ab_un = len(abnormal_idx_unsampled[abnormal_idx_unsampled >= l_un])
+    #print(l_ab_s, g_ab_s,l_ab_un, g_ab_un)
+    
     print("The mutations at ", abnormal_idx_unsampled, " will be removed due to non-existing position for unsampled SNVs in CNV")
+    
     # F = np.delete(F, abnormal_idx, axis=1)
     F_unsampled_phasing = np.delete(F_unsampled_phasing, abnormal_idx_unsampled, axis=1)
     F_unsampled_info_phasing = np.delete(F_unsampled_info_phasing, abnormal_idx_unsampled, axis=0)
-
+    Q_unsampled = np.delete(Q_unsampled, abnormal_idx_unsampled, axis=0)
+    G_unsampled = np.delete(G_unsampled, abnormal_idx_unsampled, axis=0)
+    G_unsampled = np.delete(G_unsampled, abnormal_idx_unsampled, axis=1)
+    
+    unsampled_sv_list_sort = np.delete(unsampled_sv_list_sort, abnormal_idx_unsampled[abnormal_idx_unsampled < l_un])
+    unsampled_snv_list_sort = np.delete(unsampled_snv_list_sort, abnormal_idx_unsampled-l_un)
+    
     l_g, r = Q.shape
     l, _ = G.shape
     g = l_g - l
-    print(l, g, r)
     A = A[0:m, 0:l] #empty matrix
     H = H[0:m, 0:l]
-    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, G_unsampled, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort
+    return F_phasing, F_unsampled_phasing, Q, Q_unsampled, G, G_unsampled, A, H, bp_attr, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_list_sort, unsampled_snv_list_sort, sampled_sv_list_sort, unsampled_sv_list_sort, l_ab_s, g_ab_s,l_ab_un, g_ab_un
 
 
 #  input: bp_id_to_mate_id
@@ -152,14 +174,12 @@ def make_3d_list(r,c,d):
 def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SNV_sample_dict, SNV_idx_dict, CN_sample_rec_dict, \
                   CN_sample_rec_dict_minor, CN_sample_rec_dict_major, CN_startPos_dict, CN_endPos_dict, const=120, sv_ub=80):
 
-    print("make matrices")
-    if sv_ub < 0:
+    if sv_ub <= 0:
         sampled_sv_idx_list_sorted = np.arange(len(BP_idx_dict))
         unsampled_sv_idx_list_sorted = np.array([])
         G_sampled=G
         G_unsampled=None
         if l + g <= const:
-            print('yes')
             F_phasing, Q, A, H = np.zeros((m, l + g + 2 * r)), np.zeros((l + g, r)), \
                                  np.zeros((m, l)), np.zeros((m, l))
             F_unsampled_phasing, Q_unsampled = None, None
@@ -230,6 +250,7 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
         else:
             raise Exception("Error during making matrices")
     else:
+        G_sampled=G
         assert sv_ub <= const
         if l <= sv_ub and l + g <= const:
             F_phasing, Q, A, H = np.zeros((m, l + g + 2 * r)), np.zeros((l + g,r)), \
@@ -244,6 +265,7 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
             F_SNV_unsampled_info = None
             F_CNV = F_phasing[:,(l+g):]
             F_CNV_info = F_info_phasing[(l+g):]
+            Q_SNV = Q[l:]
             Q_unsampled = None
             # for (chrom, pos), snv_idx in SNV_idx_dict.items():
             #     F_SNV_info[snv_idx][0] = chrom
@@ -329,10 +351,8 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
                     unsampled_sv_idx_list_sorted.append(i)
             sampled_sv_idx_list_sorted = np.array(sampled_sv_idx_list_sorted)
             unsampled_sv_idx_list_sorted = np.array(unsampled_sv_idx_list_sorted)
-            print(G)
             G_sampled = G[sampled_sv_idx_list_sorted,:][:, sampled_sv_idx_list_sorted]
             G_unsampled = G[unsampled_sv_idx_list_sorted,:][:, unsampled_sv_idx_list_sorted]
-            print("G", G_sampled)
             sampled_snv_idx_list_sorted = []
             sampled_list = np.random.choice(a=len(SNV_idx_dict), size=const - len(sampled_sv_idx_list_sorted), replace=False)
             unsampled_snv_idx_list_sorted = []
@@ -474,7 +494,6 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
                 else:
                     print("snv id at chr " + str(chrom) + " pos " + str(
                         pos) + " is not found in copy number info.")
-        print(l, g, r, const*(2*n-1))
         for chrom in CN_sample_rec_dict[sample]:
             for (s,e) in CN_sample_rec_dict[sample][chrom]:
                 cn_idx_list = get_CN_indices(CN_startPos_dict, CN_endPos_dict, chrom, s, e)
@@ -487,7 +506,6 @@ def make_matrices(m, n, l, g, r, G, sampleList, BP_sample_dict, BP_idx_dict,  SN
 
     # create dictionary with key as segment index and val as tuple containing (chrm, bgn, end)
     cv_attr = { i: (chrm, bgn, end) for chrm, lst in seg_dic.iteritems() for (i, bgn, end) in lst }
-    print(sampled_snv_idx_list_sorted,unsampled_snv_idx_list_sorted)
     return F_phasing, F_unsampled_phasing, G_sampled, G_unsampled, Q, Q_unsampled, A, H, cv_attr, F_info_phasing, F_unsampled_info_phasing, sampled_snv_idx_list_sorted, unsampled_snv_idx_list_sorted, sampled_sv_idx_list_sorted, unsampled_sv_idx_list_sorted
     ### A and H are empty lists
 
